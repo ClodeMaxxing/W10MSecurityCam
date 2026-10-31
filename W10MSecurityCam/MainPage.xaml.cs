@@ -136,6 +136,7 @@ namespace W10MSecurityCam
             _api.GetCameraJson = GetCameraJson;
             _api.ApplyConfig = ApplyConfigAsync;
             _api.Auth = _server.Auth;
+            _api.Log = Log;
             _api.GetSnapshotJpeg = GetSnapshotAsync;
             _snapshotsOn = _settings.Values["Snapshots"] is bool sn && sn;
             _audioOn = _settings.Values["Audio"] is bool ao && ao;

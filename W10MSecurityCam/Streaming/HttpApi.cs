@@ -42,6 +42,7 @@ namespace W10MSecurityCam.Streaming
         public Func<string> GetConfig = () => "";
         public Func<string> GetCameraJson = () => "{}";
         public DigestAuth Auth;
+        public Action<string> Log = _ => { };
 
         public async Task<byte[]> HandleAsync(HttpRequest r)
         {
@@ -89,7 +90,8 @@ namespace W10MSecurityCam.Streaming
             }
             catch (Exception ex)
             {
-                return Reply(500, "Internal Server Error", "text/plain", ex.Message + "\n");
+                Log("Web request " + r.Method + " " + r.Path + " failed: " + ex.Message); // the details stay in the log
+                return Reply(500, "Internal Server Error", "text/plain", "Internal error, see the app log\n");
             }
         }
 
@@ -230,6 +232,10 @@ namespace W10MSecurityCam.Streaming
                 "HTTP/1.0 " + code + " " + reason + "\r\n" +
                 "Content-Type: " + contentType + "\r\n" +
                 "Content-Length: " + body.Length + "\r\n" +
+                // no framing by other sites (clickjacking the settings page), no guessing of content types
+                "X-Frame-Options: DENY\r\n" +
+                "Content-Security-Policy: frame-ancestors 'none'\r\n" +
+                "X-Content-Type-Options: nosniff\r\n" +
                 extraHeaders +
                 "Connection: close\r\n\r\n");
             var all = new byte[head.Length + body.Length];
