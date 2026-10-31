@@ -4,7 +4,8 @@
 #   powershell -ExecutionPolicy Bypass -File tools\Soak-Monitor.ps1
 #   powershell -ExecutionPolicy Bypass -File tools\Soak-Monitor.ps1 -Phone 192.168.0.50 -User admin -Password secret -Every 15
 #
-# Output (in tools\soak\, kept out of git):  soak-YYYYMMDD-HHMM.csv  and  soak-YYYYMMDD-HHMM.html
+# Output (in tools\soak\, kept out of git):  soak-YYYYMMDD-HHMM.csv, soak-YYYYMMDD-HHMM.html and
+# soak-YYYYMMDD-HHMM-phone-log.txt (the phone's own log for the whole run, collected every few minutes).
 # Open the HTML file in a browser at any time; it reloads itself every minute while the monitor runs.
 # Stop with Ctrl+C. Run it again with -Csv <file> to continue an earlier run, or -ReportOnly -Csv <file> to redraw a report.
 param(
@@ -13,6 +14,7 @@ param(
   [string]$Password = 'admin',
   [int]$Every = 30,                 # seconds between samples
   [int]$ReportEvery = 60,           # seconds between report rewrites
+  [int]$LogEvery = 300,             # seconds between phone-log captures (the phone keeps only its last ~2 hours)
   [string]$Csv,
   [switch]$ReportOnly
 )
@@ -22,6 +24,8 @@ if (-not $Phone -and -not $ReportOnly) { throw 'Give -Phone ADDRESS or put the p
 $dir = Join-Path $PSScriptRoot 'soak'; New-Item -ItemType Directory -Force $dir | Out-Null
 if (-not $Csv) { $Csv = Join-Path $dir ('soak-' + (Get-Date -Format 'yyyyMMdd-HHmm') + '.csv') }
 $Html = [IO.Path]::ChangeExtension($Csv, '.html')
+$PhoneLog = [IO.Path]::ChangeExtension($Csv, $null).TrimEnd('.') + '-phone-log.txt'
+$script:LastLogLine = $null
 $jar = Join-Path $env:LOCALAPPDATA 'W10MSecurityCam\portal.jar'   # optional Device Portal pairing (Monitor-Portal.ps1 -Pair)
 
 $cols = 'time,ok,version,streaming,fps,mbps,viewers,format,bitrate,engine,latency_ms,battery_pct,battery_status,charging,net_w,draw_w,heat,heat_warn,protect,cpu_phone,cpu_app,memory_mb,wifi_bars,uptime_s,blackout,previewing,gpu_max_pct'
@@ -50,6 +54,29 @@ function Sample {
          $s.heat, (B $s.heatWarn), (B $s.protect), $cp, $ca, (Num $s.memoryMB), (Num $s.wifiBars), (Num $s.uptime),
          (B $s.blackout), (B $s.previewing), $gpu)
   ($f | ForEach-Object { ([string]$_) -replace ',', ';' }) -join ','
+}
+
+# Appends the phone log lines that are new since the last capture. The phone's /log lists the current app session
+# (oldest first) and then '--- previous session'. Lines carry only a time of day, so new lines are found by locating
+# the last line saved; if it is gone (app restarted, or more than ~2 h passed), the whole session is saved after a marker.
+function Save-PhoneLog {
+  try { $raw = curl.exe -s -m 20 --digest -u "${User}:${Password}" "http://${Phone}:5001/log" } catch { return }
+  if (-not $raw) { return }
+  $lines = @(); foreach ($l in $raw) { if ($l -like '--- previous session*') { break }; if ($l -match '^\d\d:\d\d:\d\d') { $lines += $l } }
+  if ($lines.Count -eq 0) { return }
+  $start = 0
+  if ($script:LastLogLine) {
+    $i = [array]::LastIndexOf($lines, $script:LastLogLine)
+    if ($i -ge 0) { $start = $i + 1 } else { Add-Content -Path $PhoneLog -Value ("--- " + (Get-Date -Format s) + ": new app session or gap; earlier lines may be missing ---") -Encoding utf8 }
+  }
+  if ($start -lt $lines.Count) {
+    $now = Get-Date
+    Add-Content -Path $PhoneLog -Encoding utf8 -Value ($lines[$start..($lines.Count - 1)] | ForEach-Object {
+      $d = $now.Date; $tod = [TimeSpan]::Parse($_.Substring(0, 8))
+      if ($tod -gt $now.TimeOfDay.Add([TimeSpan]::FromMinutes(5))) { $d = $d.AddDays(-1) }   # logged before midnight
+      $d.ToString('yyyy-MM-dd') + ' ' + $_ })
+  }
+  $script:LastLogLine = $lines[$lines.Count - 1]
 }
 
 function Write-Report {
@@ -172,11 +199,14 @@ function hover(c,e){
 if ($ReportOnly) { Write-Report; Write-Host "Report: $Html"; return }
 Write-Host "Recording every $Every s to $Csv"
 Write-Host "Report:  $Html  (open it in a browser; it refreshes every minute)"
+Write-Host "Phone log: $PhoneLog (every $LogEvery s)"
 Write-Host 'Stop with Ctrl+C.'
 $lastReport = [DateTime]::MinValue
+$lastLog = [DateTime]::MinValue
 while ($true) {
   $line = Sample
   Add-Content -Path $Csv -Value $line -Encoding ascii
+  if (((Get-Date) - $lastLog).TotalSeconds -ge $LogEvery) { Save-PhoneLog; $lastLog = Get-Date }
   if (((Get-Date) - $lastReport).TotalSeconds -ge $ReportEvery) { try { Write-Report } catch { Write-Warning "Report: $_" }; $lastReport = Get-Date }
   $f = $line.Split(',')
   Write-Host ("{0}  {1}  fps {2}  {3} Mbps  battery {4}%  heat {5}  mem {6} MB" -f $f[0], $(if ($f[1] -eq '1') { if ($f[3] -eq '1') { 'streaming' } else { 'stopped  ' } } else { 'UNREACHABLE' }), $f[4], $f[5], $f[11], $f[16], $f[21])
