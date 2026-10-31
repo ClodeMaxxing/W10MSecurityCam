@@ -1,11 +1,11 @@
 ﻿# W10MSecurityCam
 
-A fork of LumiaCam that turns a Lumia 950 (Windows 10 Mobile) into an always-on security
+A fork of LumiaCam (now [W10MWebCam](https://github.com/ClodeMaxxing/W10MWebCam)) that turns a Lumia 950 (Windows 10 Mobile) into an always-on security
 camera. It serves an RTSP stream that an NVR (Frigate, Blue Iris, Synology Surveillance
 Station) or VLC can pull over the home Wi-Fi.
 
 It has its own package identity (`W10MSecurityCam`, CN=W10MSecurityCam), so it installs beside
-LumiaCam. Only one of the two can use the camera at a time.
+W10MWebCam (formerly LumiaCam). Only one of the two can use the camera at a time.
 
 ## Addresses
 
@@ -176,7 +176,7 @@ runtime packages, the test certificate and `INSTALL.txt` with the steps). Check 
 
 ## Build and install
 
-Same PC setup as LumiaCam (VS 2019 with UWP + C++ UWP + ARM tools, SDK 10.0.19041, IP over USB).
+Same PC setup as W10MWebCam, formerly LumiaCam (VS 2019 with UWP + C++ UWP + ARM tools, SDK 10.0.19041, IP over USB).
 Bump `Version` in `W10MSecurityCam/Package.appxmanifest` for every install, or the phone refuses it.
 
 | Script | Use |
@@ -200,7 +200,9 @@ Developer notes are in [NOTES.md](NOTES.md). Release history is in [CHANGELOG.md
 
 ## Credits
 
-W10MSecurityCam started as a fork of LumiaCam (its camera engine and low-latency encoder sink). The RTSP/RTP server,
+W10MSecurityCam started as a fork of LumiaCam 1.0 (its camera engine and low-latency encoder sink). LumiaCam has
+since been renamed [W10MWebCam](https://github.com/ClodeMaxxing/W10MWebCam); its version 1.1 took back this fork's crash fix, power monitor, heat
+detection and camera controls. The RTSP/RTP server,
 login, audio, camera controls, settings page, status and safety nets are new.
 
 ## Licence

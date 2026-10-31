@@ -1,7 +1,7 @@
 # W10MSecurityCam — developer notes (RTSP fork)
 
 The sections below this one are the notes inherited from LumiaCam (names such as `LumiaCam/` and port 5000 describe the
-original app). In this fork the app folder is `W10MSecurityCam/`, the video server is `Rtsp/` (RTSP on 8554, USB 8020),
+original app, renamed [W10MWebCam](https://github.com/ClodeMaxxing/W10MWebCam) in its 1.1). In this fork the app folder is `W10MSecurityCam/`, the video server is `Rtsp/` (RTSP on 8554, USB 8020),
 and the HTTP log/status/settings server answers on 5001 and on both RTSP ports.
 
 ## RTSP fork: what is where
