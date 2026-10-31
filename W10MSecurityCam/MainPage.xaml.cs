@@ -152,7 +152,7 @@ namespace W10MSecurityCam
             _saveTimer.Tick += async (s, e) => { _saveTimer.Stop(); await ApplyPowerChangeAsync(); };
             _tuningTimer.Tick += async (s, e) => { _tuningTimer.Stop(); await ApplyTuningAsync(); };
             _server.Http = _api;
-            _logServer = new LogServer(_api);
+            _logServer = new LogServer(_api) { Log = Log };
             _healthTimer.Tick += (s, e) => { CheckPower(); CheckMemory(); };
             _statsTimer.Tick += (s, e) => UpdateStats();
             _wakeTimer.Tick += WakeTimer_Tick;
