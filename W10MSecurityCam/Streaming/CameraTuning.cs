@@ -296,8 +296,15 @@ namespace W10MSecurityCam.Streaming
             var vdc = cap.VideoDeviceController;
             try
             {
+                // The 950's continuous autofocus sometimes reports 0 (the near end stop) while the picture is sharp, so a
+                // reading at the end stop is replaced by the last sensible one (switching to manual showed "focus 0" and a
+                // blurred picture; fix from W10MWebCam).
                 if (focus && FocusSupported && FocusMax > FocusMin)
-                    FocusPercent = Math.Max(0, Math.Min(100, 100.0 * ((double)vdc.FocusControl.Value - FocusMin) / (FocusMax - FocusMin)));
+                {
+                    uint v = vdc.FocusControl.Value;
+                    if (IsSensibleFocus(v)) FocusPercent = ToPercent(v);
+                    else if (LastGoodFocusPercent.HasValue) FocusPercent = LastGoodFocusPercent.Value;
+                }
             }
             catch { }
             try
@@ -356,8 +363,15 @@ namespace W10MSecurityCam.Streaming
             try { var iso = vdc.IsoSpeedControl; if (iso.Supported) s.Append(", ISO ").Append(iso.Value); } catch { }
             try { if (FocusSupported) s.Append(", focus ").Append(vdc.FocusControl.Value).Append(" (").Append(FocusHeld ? "held" : vdc.FocusControl.Mode.ToString()).Append(")"); } catch { }
             try { if (WhiteBalanceSupported) s.Append(", white balance ").Append(vdc.WhiteBalanceControl.Value).Append(" K (").Append(vdc.WhiteBalanceControl.Preset).Append(")"); } catch { }
+            try { if (FocusSupported && IsSensibleFocus(vdc.FocusControl.Value)) LastGoodFocusPercent = ToPercent(vdc.FocusControl.Value); } catch { }
             State = s.ToString().TrimStart(',', ' ');
         }
+
+        /// <summary>The last lens position read back that was not at the near end stop (see SeedFromCamera).</summary>
+        public double? LastGoodFocusPercent;
+
+        private bool IsSensibleFocus(uint v) => FocusMax > FocusMin && v > FocusMin + (FocusMax - FocusMin) * 0.02;
+        private double ToPercent(uint v) => Math.Max(0, Math.Min(100, 100.0 * ((double)v - FocusMin) / (FocusMax - FocusMin)));
 
         private uint PercentToFocus(double pct)
         {
