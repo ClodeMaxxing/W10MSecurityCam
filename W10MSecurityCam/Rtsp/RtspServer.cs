@@ -27,7 +27,7 @@ namespace W10MSecurityCam.Rtsp
         public HttpApi Http;
         /// <summary>Login for RTSP (and the web pages). Always on: with no password stored nobody gets in.</summary>
         public readonly DigestAuth Auth = new DigestAuth();
-        /// <summary>Most simultaneous connections accepted (NVR record + detect streams + a few viewers).</summary>
+        /// <summary>Most simultaneous connections accepted (NVR record + detect streams + a few viewers); the last one only over USB.</summary>
         public int MaxConnections = 8;
         /// <summary>Accept RTP over UDP when a client asks for it. Off by default: on Wi-Fi, TCP is more reliable.</summary>
         public volatile bool AllowUdp;
@@ -94,17 +94,21 @@ namespace W10MSecurityCam.Rtsp
 
         private void OnConnection(StreamSocketListener sender, StreamSocketListenerConnectionReceivedEventArgs args)
         {
+            string ip = args.Socket.Information.RemoteAddress?.DisplayName ?? "?";
+            // The last slot is kept for the PC over USB (127.0.0.1), so the USB port stays usable when Wi-Fi is full.
+            int limit = ip == "127.0.0.1" ? MaxConnections : MaxConnections - 1;
+            RtspConnection c;
             lock (_lock)
             {
-                if (_connections.Count >= MaxConnections)
+                if (_connections.Count >= limit)
                 {
-                    Log("RTSP: too many connections (" + MaxConnections + ") - refusing " + (args.Socket.Information.RemoteAddress?.DisplayName ?? "?"));
+                    Log("RTSP: too many connections (" + _connections.Count + ") - refusing " + ip);
                     try { args.Socket.Dispose(); } catch { }
                     return;
                 }
+                c = new RtspConnection(this, args.Socket);
+                _connections.Add(c);
             }
-            var c = new RtspConnection(this, args.Socket);
-            lock (_lock) _connections.Add(c);
             var _ = c.RunAsync(() => { lock (_lock) _connections.Remove(c); });
         }
 

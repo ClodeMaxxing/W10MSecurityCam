@@ -23,6 +23,7 @@ namespace W10MSecurityCam.Rtsp
     {
         private static readonly Stopwatch Clock = Stopwatch.StartNew();
         private const int SessionTimeoutSeconds = 60;
+        private const int RequestTimeoutSeconds = 30; // before PLAY: a complete request at least this often
 
         private readonly RtspServer _server;
         private readonly StreamSocket _socket;
@@ -157,6 +158,7 @@ namespace W10MSecurityCam.Rtsp
 
         private byte[] _in = new byte[16384];
         private int _inLen;
+        private long _lastRequestTicks = Clock.ElapsedTicks; // when the last complete request arrived
 
         private async Task ReadLoopAsync()
         {
@@ -165,7 +167,23 @@ namespace W10MSecurityCam.Rtsp
             {
                 while (!_closed)
                 {
-                    uint got = await reader.LoadAsync(8192);
+                    uint got;
+                    if (_everPlayed)
+                        got = await reader.LoadAsync(8192); // playing: the keep-alive check (CheckHealth) takes over
+                    else
+                    {
+                        // Not playing yet: a client that sends nothing (or half a request) must not hold a slot for long.
+                        double left = RequestTimeoutSeconds - Seconds(Clock.ElapsedTicks - _lastRequestTicks);
+                        using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(Math.Max(0.1, left))))
+                        {
+                            try { got = await reader.LoadAsync(8192).AsTask(cts.Token); }
+                            catch (OperationCanceledException)
+                            {
+                                Log("no complete request for " + RequestTimeoutSeconds + " s - closing");
+                                return;
+                            }
+                        }
+                    }
                     if (got == 0) return; // client closed the connection
                     if (_inLen + (int)got > _in.Length)
                     {
@@ -225,6 +243,7 @@ namespace W10MSecurityCam.Rtsp
                 if (_inLen < headerEnd + blank + bodyLen) return true; // wait for the body
                 string body = bodyLen > 0 ? Encoding.UTF8.GetString(_in, headerEnd + blank, bodyLen) : "";
                 Consume(headerEnd + blank + bodyLen);
+                _lastRequestTicks = Clock.ElapsedTicks;
 
                 var parts = lines[0].Split(' ');
                 string method = parts[0].ToUpperInvariant();
