@@ -3,6 +3,12 @@
 Release 1.0 is the first version considered complete for this fork. Build numbers 1.0-1.9 before it were the
 development steps; they are kept in the history table for reference.
 
+## Release 1.1.1 (build 1.9.30.0)
+- **Security fix:** a single crafted RTSP request with a negative `Content-Length` made the app handle the same request again forever until it ran out of memory. It needed no login (OPTIONS) and reached the always-on RTSP ports (8554, and 8020 over USB). Such a request now closes the connection, and a client that never reads its replies is disconnected after 64.
+- **The login is needed over the USB cable too.** Any program or web page on the PC the phone is plugged into can reach the USB port, so "no login over USB" let a web page change settings or reset the login. The settings page, `/status`, the log and `/config` now ask for the login on every port.
+- Changes (`/config`, `/camera/set`) also need the `X-Requested-With: W10MSecurityCam` header and the phone's address in the `Host` header, over USB too.
+- `tools\set-camera-config.ps1` and `tools\get-phone-log-usb.ps1` take `-User` / `-Password` (or the `W10M_USER` / `W10M_PASSWORD` environment variables) and ask otherwise. The config script no longer says an empty password removes the login: it resets it to the default.
+
 ## Release 1.1 (build 1.9.29.0)
 - **Crash fix:** the app could close about a second after the first 4K frame on a fresh launch (crash dump: fast-fail abort from an exception escaping the native sink's worker thread). The native sink and the frame handler now catch and log such errors ("handler threw an exception - ignored") instead of ending the app.
 - **Camera power saving:** one "Power-saving camera features" box (stabilization off for a fixed mount, hold focus once it has settled); untick it to choose each option. HDR and noise-reduction controls were removed because this camera does not offer them.
