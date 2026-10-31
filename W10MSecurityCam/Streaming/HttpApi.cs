@@ -16,6 +16,10 @@ namespace W10MSecurityCam.Streaming
         public string Body = "";
         /// <summary>True when the request came over the USB cable (Microsoft's IP-over-USB shows up as 127.0.0.1).</summary>
         public bool FromUsb;
+        /// <summary>The target as sent on the request line (the Digest response must name it).</summary>
+        public string Target = "/";
+        /// <summary>The client's IP address (wrong logins are counted per address).</summary>
+        public string RemoteIp;
     }
 
     /// <summary>
@@ -46,7 +50,10 @@ namespace W10MSecurityCam.Streaming
                 string path = r.Path.TrimEnd('/');
                 // Everything needs the login, over USB too: any program or web page on the PC the phone is plugged into
                 // can reach the USB port, so being on USB proves nothing.
-                if (Auth != null && Auth.Enabled && !Auth.Check(r.Method, Header(r, "Authorization"), out bool gateStale))
+                // Checked once per request: with qop each nonce count may only be used once.
+                if (Auth != null && Auth.IsLockedOut(r.RemoteIp))
+                    return Reply(429, "Too Many Requests", "text/plain", "Too many wrong logins - try again in 30 seconds\n", "Retry-After: 30\r\n");
+                if (Auth != null && !Auth.Check(r.Method, r.Target, Header(r, "Authorization"), r.RemoteIp, out bool gateStale))
                     return Reply(401, "Unauthorized", "text/plain", "Login required\n", Auth.Challenge(gateStale));
                 if (path == "" || path == "/log")
                     return Reply(200, "OK", "text/plain; charset=utf-8", GetLog());
@@ -56,8 +63,6 @@ namespace W10MSecurityCam.Streaming
 
                 if (path == "/snapshot.jpg" || path == "/snapshot")
                 {
-                    if (Auth != null && !Auth.Check(r.Method, Header(r, "Authorization"), out bool stale))
-                        return Reply(401, "Unauthorized", "text/plain", "Login required\n", Auth.Challenge(stale));
                     var jpg = GetSnapshotJpeg != null ? await GetSnapshotJpeg() : null;
                     if (jpg == null) return Reply(404, "Not Found", "text/plain", "Snapshots are turned off (or the camera is not streaming)\n");
                     return Reply(200, "OK", "image/jpeg", jpg, "Cache-Control: no-store\r\n");
@@ -89,16 +94,13 @@ namespace W10MSecurityCam.Streaming
         }
 
         /// <summary>
-        /// The camera-settings page. Everything here needs the stream login (over USB too); with no login the page is
-        /// view only.
+        /// The camera-settings page. Everything here needs the stream login (over USB too), checked in HandleAsync.
         /// </summary>
         private async Task<byte[]> HandleCameraAsync(HttpRequest r, string path)
         {
             string result = null;
             bool loginSet = Auth != null && Auth.Enabled;
             bool canWrite = loginSet;
-            if (loginSet && !Auth.Check(r.Method, Header(r, "Authorization"), out bool stale))
-                return Reply(401, "Unauthorized", "text/plain", "Login required\n", Auth.Challenge(stale));
 
             if (path == "/camera")
                 return Reply(200, "OK", "text/html; charset=utf-8", CameraPage.Html, "Cache-Control: no-store\r\n");
@@ -134,8 +136,8 @@ namespace W10MSecurityCam.Streaming
         {
             if (f.TryGetValue("user", out var u) && !System.Text.RegularExpressions.Regex.IsMatch(u ?? "", @"^[A-Za-z0-9._-]{1,32}$"))
             { f.Remove("user"); f.Remove("password"); return "Not changed: the user name may use letters, digits . _ - (1-32 characters)"; }
-            if (f.TryGetValue("password", out var p) && (p == null || p.Length < 4 || p.Length > 64 || p.Any(ch => ch < ' ')))
-            { f.Remove("user"); f.Remove("password"); return "Not changed: the password needs 4-64 characters"; }
+            if (f.TryGetValue("password", out var p) && (p == null || p.Length < DigestAuth.MinPasswordLength || p.Length > 64 || p.Any(ch => ch < ' ')))
+            { f.Remove("user"); f.Remove("password"); return "Not changed: the password needs " + DigestAuth.MinPasswordLength + "-64 characters"; }
             return null;
         }
 
@@ -193,10 +195,11 @@ namespace W10MSecurityCam.Streaming
         private static string Unescape(string s) => Uri.UnescapeDataString(s.Replace('+', ' '));
 
         /// <summary>Parses "GET /path?query HTTP/1.1" plus headers into a request.</summary>
-        public static HttpRequest Parse(string requestLine, Dictionary<string, string> headers, string body, bool fromUsb)
+        public static HttpRequest Parse(string requestLine, Dictionary<string, string> headers, string body, bool fromUsb, string remoteIp)
         {
             var parts = requestLine.Split(' ');
             string target = parts.Length > 1 ? parts[1] : "/";
+            string original = target;
             // absolute form (http://host:port/path) -> path
             int scheme = target.IndexOf("://", StringComparison.Ordinal);
             if (scheme >= 0)
@@ -212,7 +215,9 @@ namespace W10MSecurityCam.Streaming
                 Query = q < 0 ? "" : target.Substring(q + 1),
                 Headers = headers,
                 Body = body ?? "",
-                FromUsb = fromUsb
+                FromUsb = fromUsb,
+                Target = original,
+                RemoteIp = remoteIp
             };
         }
 

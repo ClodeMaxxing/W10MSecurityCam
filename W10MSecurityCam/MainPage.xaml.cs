@@ -126,6 +126,7 @@ namespace W10MSecurityCam
 
             Application.Current.UnhandledException += (s, e) => Log("CRASH (unhandled): " + e.Exception);
             _server.Log = Log;
+            _server.Auth.Log = Log;
             _server.Auth.Load();
             _server.Auth.AllowBasic = _settings.Values["AllowBasic"] is bool ab && ab;
             _server.AllowUdp = _settings.Values["AllowUdp"] is bool au && au;
@@ -868,7 +869,7 @@ namespace W10MSecurityCam
         {
             try
             {
-                if (!string.IsNullOrEmpty(PassBox.Password) && PassBox.Password.Length < 4) { Log("Password not changed: it needs at least 4 characters"); return; }
+                if (!string.IsNullOrEmpty(PassBox.Password) && PassBox.Password.Length < DigestAuth.MinPasswordLength) { Log("Password not changed: it needs at least " + DigestAuth.MinPasswordLength + " characters"); return; }
                 _server.Auth.Save(UserBox.Text, PassBox.Password);
                 PassBox.Password = "";
                 Log(_server.Auth.IsDefault ? "Login reset to the default (admin / admin)" : "Login set for user \"" + _server.Auth.UserName + "\" (stream and web page)");
@@ -1618,7 +1619,9 @@ namespace W10MSecurityCam
                 foreach (var k in new[] { "powersave", "savepower", "saveois", "savefocus", "torch", "format", "bitrate", "highbw" }) had |= form.Remove(k);
                 if (had) done.Add("heat protection is on: power-saving options, video format/bitrate and the flashlight cannot be changed until charging resumes");
             }
-            if (form.ContainsKey("password"))
+            if (form.TryGetValue("password", out var newPassword) && newPassword.Length > 0 && newPassword.Length < DigestAuth.MinPasswordLength)
+                done.Add("login not changed: the password needs at least " + DigestAuth.MinPasswordLength + " characters");
+            else if (form.ContainsKey("password"))
             {
                 string user = form.TryGetValue("user", out var u) ? u : _server.Auth.UserName;
                 _server.Auth.Save(user, form["password"]);

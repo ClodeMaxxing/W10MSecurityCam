@@ -74,7 +74,7 @@ namespace W10MSecurityCam.Streaming
                     }
                     string body = Encoding.UTF8.GetString(bytes, headerEnd + 4, Math.Min(bodyLen, bytes.Length - headerEnd - 4));
                     bool fromUsb = socket.Information.RemoteAddress?.DisplayName == "127.0.0.1";
-                    byte[] reply = await _api.HandleAsync(HttpApi.Parse(lines[0], headers, body, fromUsb));
+                    byte[] reply = await _api.HandleAsync(HttpApi.Parse(lines[0], headers, body, fromUsb, socket.Information.RemoteAddress?.DisplayName));
                     await socket.OutputStream.WriteAsync(reply.AsBuffer());
                     await socket.OutputStream.FlushAsync();
                 }

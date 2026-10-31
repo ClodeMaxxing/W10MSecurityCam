@@ -25,7 +25,7 @@ namespace W10MSecurityCam.Rtsp
         public Action<string> Log = _ => { };
         /// <summary>Plain HTTP requests on an RTSP port go here (log, /status, /config). Lets the PC use them over USB.</summary>
         public HttpApi Http;
-        /// <summary>Login for RTSP. With no password set, everyone may watch.</summary>
+        /// <summary>Login for RTSP (and the web pages). Always on: with no password stored nobody gets in.</summary>
         public readonly DigestAuth Auth = new DigestAuth();
         /// <summary>Most simultaneous connections accepted (NVR record + detect streams + a few viewers).</summary>
         public int MaxConnections = 8;

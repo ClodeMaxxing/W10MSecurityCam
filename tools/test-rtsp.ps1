@@ -305,7 +305,10 @@ try {
         $e2 = $s2.IndexOf("`r`n`r`n")
         if ($e2 -lt 0) { break }
         $first = $s2.Split("`n")[0].Trim()
-        if ($first -notmatch '200 OK') { L "Unexpected answer during play: $first" }
+        if ($first -match '^RTSP/1.0 401' -and $s2.Substring(0, $e2) -match '(?i)Digest realm="([^"]*)",\s*nonce="([^"]*)",\s*stale=TRUE') {
+          # nonces last 5 minutes: take the new one for the next keep-alive
+          $script:auth = @{ Realm = $Matches[1]; Nonce = $Matches[2] }; L 'Keep-alive: login nonce renewed'
+        } elseif ($first -notmatch '200 OK') { L "Unexpected answer during play: $first" }
         $pos += $e2 + 4
         continue
       }

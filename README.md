@@ -102,7 +102,7 @@ page, `/status`, the log, `/config` and snapshots. A fresh install uses **admin 
 settings page warn until you change it.
 
 - **Settings page:** open `http://PHONE-IP:5001/camera`, sign in, and use the **Login** section at the bottom (user name,
-  new password twice, 4-64 characters). Your browser asks you to sign in again afterwards.
+  new password twice, 8-64 characters). Your browser asks you to sign in again afterwards.
 - **On the phone:** tap the screen to wake it, open **Network and login**, enter a user name and password under "Login
   (stream and web page)" and tap **Save login**. An empty password resets the login to admin / admin (it is never
   turned off).
