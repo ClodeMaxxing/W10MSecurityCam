@@ -1312,6 +1312,7 @@ namespace W10MSecurityCam
             // 20 s of paused charging = hot (a brief pause is not); back to normal after 30 s of charging again.
             if (!_protect && _pausedSecs >= 20) { var _e = EnterProtectionAsync(); }
             else if (_protect && _chargingSecs >= 30 && (DateTime.Now - _protectSince).TotalMinutes >= 3) { var _x = LeaveProtectionAsync(); }
+            else if (_protectRestartOwed && !_protectBusy && !_busy) { var _r = RestartStreamForProtectionAsync(); }
             _heatWarn = paused || _protect;
             _heat = _protect ? "Unstable (heat protection on)" : paused ? "Unstable (charging paused - probably hot)" : "Healthy";
             _heatDetail = _protect ? "Heat protection is on: the stream is lowered to 1080p / 6 Mbps, power-saving options are forced on and the flashlight is unavailable until charging resumes."
@@ -1321,7 +1322,7 @@ namespace W10MSecurityCam
         // ---- Heat protection: when charging stalls on a good charger, force every power-saving option on and lock the
         // flashlight; put the person's own settings back once charging resumes. The forced values are never written to the
         // saved settings, so an app restart in between also comes back with the person's own choices.
-        private bool _protect, _protectBusy;
+        private bool _protect, _protectBusy, _protectRestartOwed;
         private bool _pOis, _pFocus, _pBlackoutSetting;
         private string _pFormatKey = "", _pBitrateKey = "";
         private DateTime _protectSince = DateTime.MinValue;
@@ -1393,10 +1394,16 @@ namespace W10MSecurityCam
             return cur != 0 && cur <= 6000000 ? null : CoolBitrate;
         }
 
-        /// <summary>One restart picks up the video format and the stabilization setting together.</summary>
+        /// <summary>
+        /// One restart picks up the video format and the stabilization setting together. When the stream is busy
+        /// starting or stopping, the restart is owed and UpdateHeatHint retries it (it was skipped for good before, so
+        /// the stream could stay at 4K while heat protection was on).
+        /// </summary>
         private async Task RestartStreamForProtectionAsync()
         {
-            if (_camera == null || !_camera.IsStreaming || _busy) return;
+            if (_camera == null || !_camera.IsStreaming) { _protectRestartOwed = false; return; } // the next start uses the new settings
+            if (_busy) { if (!_protectRestartOwed) Log("Heat protection: stream busy, restarting it shortly"); _protectRestartOwed = true; return; }
+            _protectRestartOwed = false;
             Log("Heat protection: restarting the stream once");
             await ToggleStreamingAsync();
             await ToggleStreamingAsync();
