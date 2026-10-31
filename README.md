@@ -1,11 +1,18 @@
 ﻿# W10MSecurityCam
 
-A fork of LumiaCam (now [W10MWebCam](https://github.com/ClodeMaxxing/W10MWebCam)) that turns a Lumia 950 (Windows 10 Mobile) into an always-on security
-camera. It serves an RTSP stream that an NVR (Frigate, Blue Iris, Synology Surveillance
-Station) or VLC can pull over the home Wi-Fi.
+A fork of [W10MWebCam](https://github.com/ClodeMaxxing/W10MWebCam) (formerly LumiaCam) that turns a Lumia 950
+(Windows 10 Mobile) into an always-on security camera. It serves an RTSP stream that an NVR (Frigate, Blue Iris,
+Synology Surveillance Station) or VLC can pull over the home Wi-Fi.
+
+> **Compatibility:** tested only on the **Lumia 950** with Windows 10 Mobile 1709, OS build **10.0.15254.603** (ARM).
+> Other Windows 10 Mobile phones are untested.
+
+Documentation, step by step: the [wiki](https://github.com/ClodeMaxxing/W10MSecurityCam/wiki). Ready-built packages:
+[latest release](https://github.com/ClodeMaxxing/W10MSecurityCam/releases/latest) (see *Install a release* below).
 
 It has its own package identity (`W10MSecurityCam`, CN=W10MSecurityCam), so it installs beside
-W10MWebCam (formerly LumiaCam). Only one of the two can use the camera at a time.
+W10MWebCam and its sister app [W10MDashcam](https://github.com/ClodeMaxxing/W10MDashcam). Only one of them can use the
+camera at a time.
 
 ## Addresses
 
@@ -27,8 +34,8 @@ Give the phone a fixed address (a DHCP reservation in the router), so the NVR al
 
 ## Defaults
 
-1080p at 24 fps (the lowest rate of 15 fps or more the camera offers), 4 Mbps. These replace
-LumiaCam's settings once, the first time version 1.2 or later starts. You can change them in the app.
+1080p at 24 fps (the lowest rate of 15 fps or more the camera offers), 4 Mbps, keyframe every 2 s. A fresh install
+starts with these; you can change them in the app.
 
 **4K:** 4K30 works over the home Wi-Fi: 45-second tests at 8, 12, 16 and 24 Mbps all ran at a full 30 fps with no
 lost packets (about 7, 11, 15 and 22 Mbps on the wire). How much bitrate 4K needs depends on the scene; 12-16 Mbps
@@ -68,7 +75,8 @@ a second or two for the NVR. Keeping the preview running behind the black screen
 the app's CPU use (12% to 24%) and raised the battery draw. The start/stop chirp is Windows' own recording sound; it
 follows the phone's Ringer + notifications volume.
 
-Everything on the page needs the login (see Login below). Over the USB cable no login is needed.
+Everything on the page needs the login (see Login below), over the USB cable too: any program or web page on the PC
+the phone is plugged into can reach the USB port.
 
 **High bandwidth mode** unlocks bitrates above 24 Mbps (up to 60). It needs 5 GHz Wi-Fi or a USB-C connection; at
 60 Mbps on 2.4 GHz the stream drops frames. Auto bitrate is capped at 16 Mbps (40 Mbps in high bandwidth mode).
@@ -89,14 +97,18 @@ login is kept). The log says "SELF-CHECK".
 
 ## Login
 
-One login protects everything on the phone from the network: the RTSP stream, the settings page, `/status`, the log and
-snapshots. A fresh install uses **admin / admin**; the phone screen and the settings page warn until you change it.
+One login protects everything on the phone, over Wi-Fi and over the USB cable alike: the RTSP stream, the settings
+page, `/status`, the log, `/config` and snapshots. A fresh install uses **admin / admin**; the phone screen and the
+settings page warn until you change it.
 
 - **Settings page:** open `http://PHONE-IP:5001/camera`, sign in, and use the **Login** section at the bottom (user name,
   new password twice, 4-64 characters). Your browser asks you to sign in again afterwards.
-- **On the phone:** tap the screen to wake it, scroll to "Login (stream and web page)", enter a user name and password and
-  tap **Save login**. An empty password resets the login to admin / admin (it is never turned off).
-- **From the PC over USB:** run `tools\Set-Camera-Login.cmd`. The USB cable needs no login.
+- **On the phone:** tap the screen to wake it, open **Network and login**, enter a user name and password under "Login
+  (stream and web page)" and tap **Save login**. An empty password resets the login to admin / admin (it is never
+  turned off).
+- **From the PC over USB:** run `tools\Set-Camera-Login.cmd`. It asks for the current login first, then the new one;
+  an empty new password resets it to admin / admin.
+- **Forgotten password:** set a new one on the phone (Network and login); it does not ask for the old one.
 
 NVRs then use `rtsp://USER:PASSWORD@PHONE-IP:8554/live`. The phone uses Digest authentication, which doesn't send the
 password itself. Older NVRs that only know Basic authentication can be allowed with `basic=on` (see Settings over USB).
@@ -105,7 +117,7 @@ The login is kept in the Windows password vault, so it survives reinstalling the
 
 ## Microphone audio
 
-Turn on **Microphone audio in the stream (AAC)** in the app, or send `audio=on` (see Settings over USB).
+Turn on **Microphone audio (AAC)** under Video on the phone, or send `audio=on` (see Settings over USB).
 The camera restarts and, the first time, the phone asks whether the app may use the microphone.
 Audio only works with the normal low-latency engine; in safe mode (MP4 engine) the stream is video only.
 `/status` shows `"audio":"streaming"` when it is working.
@@ -119,7 +131,11 @@ Audio only works with the normal low-latency engine; in safe mode (MP4 engine) t
 
 ## Settings over USB
 
-Most settings can be changed from the web page after signing in. The fields below can all be sent over the USB cable, which needs no login, since plugging in the cable shows you own the phone. `tools\set-camera-config.ps1` takes form fields:
+Most settings can be changed from the web page after signing in. The fields below can all be sent to `/config`, which
+only answers over the USB cable and needs the login like everything else. Changes (POST) also need the header
+`X-Requested-With: W10MSecurityCam` and `127.0.0.1` or `localhost` as `Host`. `tools\set-camera-config.ps1` does all
+that; it takes the current login with `-User`/`-Password` or the environment variables `W10M_USER`/`W10M_PASSWORD`,
+asks for it otherwise, and takes form fields:
 
 ```
 powershell -File tools\set-camera-config.ps1 -Body "user=admin&password=secret"
@@ -130,9 +146,9 @@ powershell -File tools\set-camera-config.ps1 -Body "password="        (resets th
 
 Fields: `user`, `password`, `basic=on|off`, `stream=start|stop|restart`, `engine=normal`, `highbw=on|off`, `powersave=on|off`,
 `camera=auto|manual`, `focus=auto|manual|once|0-100`, `exposure=auto|manual|MS`, `wb=auto|manual|KELVIN`, `format=WIDTHxHEIGHT@FPS`, `bitrate=MBPS|auto`, `audio=on|off`,
-`udp=on|off`, `snapshot=on|off`. Changing format or bitrate restarts the stream (viewers reconnect within a
-second or two). The list of formats the camera offers is shown by `/config`.
-`http://127.0.0.1:8020/config` shows the current values.
+`udp=on|off`, `snapshot=on|off`, `savepower=on|off`, `saveois=on|off`, `savefocus=on|off`, `torch=on|off`. Changing
+format or bitrate restarts the stream (viewers reconnect within a second or two). The list of formats the camera offers
+is shown by `/config`. `http://127.0.0.1:8020/config` shows the current values (the browser asks for the login).
 
 ## Running it as a camera
 
@@ -166,17 +182,44 @@ preview state, and the busiest GPU engine if Device Portal is paired (`tools\Mon
 the phone does not answer is recorded as unreachable. Next to it, `soak-DATE.html` shows a graph of each metric over
 time (hover for values) and a summary: phone reachable %, streaming %, app restarts, stream stops, fps average and
 minimum, time with a heat warning or in heat protection, battery minimum, and the memory trend in MB per hour (a slow
-leak shows there). The page reloads itself every minute while the monitor runs. Stop with Ctrl+C; `-Csv FILE`
+leak shows there). The page reloads itself every minute while the monitor runs. The phone keeps only its last
+hour or two of log, so the monitor also saves it every 5 minutes to `soak-DATE-phone-log.txt` (dated lines, the whole
+run; `-LogEvery` changes the interval). Stop with Ctrl+C; `-Csv FILE`
 continues an earlier run and `-ReportOnly -Csv FILE` redraws a report.
 
 ## Install a release
 
-Download `W10MSecurityCam_1.0_ARM.zip` from the project's Releases page (it holds the signed package, its three Microsoft
-runtime packages, the test certificate and `INSTALL.txt` with the steps). Check it against `SHA256SUMS.txt`.
+The release is ready-built: no compiling and nothing else to download. Download `W10MSecurityCam_<version>_ARM.zip`
+from the [latest release](https://github.com/ClodeMaxxing/W10MSecurityCam/releases/latest). It holds:
+
+- the app package, `W10MSecurityCam_<package version>_ARM.appx` (the package version has four parts, for example
+  1.9.30.0 for release 1.1.1);
+- `Dependencies\` with the three Microsoft runtime packages it needs: `Microsoft.NET.Native.Framework.1.7.appx`,
+  `Microsoft.NET.Native.Runtime.1.7.appx` and `Microsoft.VCLibs.ARM.14.00.appx`;
+- the test certificate the package is signed with (`.cer`), `INSTALL.txt` with the steps, and `LICENSE`.
+
+Check the zip against `SHA256SUMS.txt` from the same release, in PowerShell:
+
+```
+Get-FileHash .\W10MSecurityCam_<version>_ARM.zip -Algorithm SHA256
+```
+
+(or `certutil -hashfile W10MSecurityCam_<version>_ARM.zip SHA256` in a command prompt).
+
+Install with **Device Portal**: on the phone, Settings > Update & security > For developers, turn on Developer mode,
+Device discovery and Device Portal. Open the address it shows in a browser on the PC, pair with the PIN the phone
+shows, then **Apps > Install app**: the `.appx` plus the three files in `Dependencies`. `WinAppDeployCmd` from the
+Windows 10 SDK works too. Step by step: [Installation](https://github.com/ClodeMaxxing/W10MSecurityCam/wiki/Installation)
+on the [wiki](https://github.com/ClodeMaxxing/W10MSecurityCam/wiki).
+
+**Updating:** install the newer package the same way; settings are kept. If Device Portal refuses with *same identity
+but different contents*, the version number is unchanged: uninstall the app first (this resets its settings; the
+login is kept in the Windows password vault).
 
 ## Build and install
 
-Same PC setup as W10MWebCam, formerly LumiaCam (VS 2019 with UWP + C++ UWP + ARM tools, SDK 10.0.19041, IP over USB).
+Same PC setup as W10MWebCam, formerly LumiaCam (VS 2019 with UWP + C++ UWP + ARM tools, SDK 10.0.19041, IP over USB);
+see [Building from Source](https://github.com/ClodeMaxxing/W10MSecurityCam/wiki/Building-from-Source) on the wiki.
 Bump `Version` in `W10MSecurityCam/Package.appxmanifest` for every install, or the phone refuses it.
 
 | Script | Use |
@@ -184,7 +227,7 @@ Bump `Version` in `W10MSecurityCam/Package.appxmanifest` for every install, or t
 | `tools\Build-And-Deploy.cmd` | Build Release ARM and install on the phone (USB first, then Wi-Fi using the address in `tools\phone-ip.txt`) |
 | `tools\Install-Only.cmd` | Re-install the last build |
 | `tools\Get-Phone-Log.cmd` | Download the phone log to `tools\phone-log.txt` |
-| `tools\Set-Camera-Login.cmd` | Set or remove the stream login over USB |
+| `tools\Set-Camera-Login.cmd` | Set or reset the stream login over USB (asks for the current login; it is never removed) |
 | `tools\Test-RTSP.cmd` | Play the Wi-Fi stream for 15 s, check it, save it to `tools\rtsp-test.h264` |
 | `tools\Test-USB-Video.cmd` | Same test over USB |
 | `tools\test-rtsp.ps1` | The test itself: `-Seconds`, `-User`/`-Password`, `-Udp`, `-NoSave` (long runs), `-Abrupt`, `-NoAudio`. Saves video to `.h264` and audio to `.aac` |
@@ -200,10 +243,11 @@ Developer notes are in [NOTES.md](NOTES.md). Release history is in [CHANGELOG.md
 
 ## Credits
 
-W10MSecurityCam started as a fork of LumiaCam 1.0 (its camera engine and low-latency encoder sink). LumiaCam has
-since been renamed [W10MWebCam](https://github.com/ClodeMaxxing/W10MWebCam); its version 1.1 took back this fork's crash fix, power monitor, heat
-detection and camera controls. The RTSP/RTP server,
-login, audio, camera controls, settings page, status and safety nets are new.
+W10MSecurityCam started as a fork of [W10MWebCam](https://github.com/ClodeMaxxing/W10MWebCam) (formerly LumiaCam)
+1.0: its camera engine and low-latency encoder sink. W10MWebCam's version 1.1 took back this fork's crash fix, power
+monitor, heat detection and camera controls. The RTSP/RTP server, login, audio, camera controls, settings page, status
+and safety nets are new. The sister app [W10MDashcam](https://github.com/ClodeMaxxing/W10MDashcam), a 4K dashcam,
+forked from W10MSecurityCam 1.1.
 
 ## Licence
 
