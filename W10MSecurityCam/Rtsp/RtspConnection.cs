@@ -65,6 +65,9 @@ namespace W10MSecurityCam.Rtsp
         private readonly LinkedList<Item> _queue = new LinkedList<Item>();
         private readonly SemaphoreSlim _signal = new SemaphoreSlim(0);
         private long _queuedMediaBytes;
+        private int _queuedReplies;          // RTSP/HTTP replies waiting (not media)
+        private const int MaxQueuedReplies = 64; // a client that sends requests but never reads the replies is closed
+        private const int MaxBodyBytes = 64 * 1024;
         private long _lastSendTicks = Clock.ElapsedTicks;
         private long _lastActivityTicks = Clock.ElapsedTicks;
         private volatile bool _closed, _closeWhenDrained;
@@ -210,7 +213,12 @@ namespace W10MSecurityCam.Rtsp
                     if (colon > 0) headers[lines[i].Substring(0, colon).Trim()] = lines[i].Substring(colon + 1).Trim();
                 }
                 int bodyLen = 0;
-                if (headers.TryGetValue("Content-Length", out var cl)) int.TryParse(cl, out bodyLen);
+                if (headers.TryGetValue("Content-Length", out var cl) && (!int.TryParse(cl, out bodyLen) || bodyLen < 0 || bodyLen > MaxBodyBytes))
+                {
+                    // A negative length made Consume() keep the same request and handle it again forever.
+                    Log("bad Content-Length - closing");
+                    return false;
+                }
                 int blank = _in[headerEnd] == (byte)'\r' ? 4 : 2;
                 if (_inLen < headerEnd + blank + bodyLen) return true; // wait for the body
                 string body = bodyLen > 0 ? Encoding.UTF8.GetString(_in, headerEnd + blank, bodyLen) : "";
@@ -652,11 +660,18 @@ namespace W10MSecurityCam.Rtsp
         {
             if (_closed) return;
             item.QueuedAt = Clock.ElapsedTicks;
+            bool tooMany = false;
             lock (_queue)
             {
-                _queue.AddLast(item);
-                if (item.IsMedia) _queuedMediaBytes += item.Size;
+                if (!item.IsMedia && _queuedReplies >= MaxQueuedReplies) tooMany = true;
+                else
+                {
+                    _queue.AddLast(item);
+                    if (item.IsMedia) _queuedMediaBytes += item.Size;
+                    else _queuedReplies++;
+                }
             }
+            if (tooMany) { Log("too many unread replies - closing"); Close(); return; }
             _signal.Release();
         }
 
@@ -701,6 +716,7 @@ namespace W10MSecurityCam.Rtsp
                             item = _queue.First.Value;
                             _queue.RemoveFirst();
                             if (item.IsMedia) _queuedMediaBytes -= item.Size;
+                            else _queuedReplies--;
                         }
                     }
                     if (item != null)
