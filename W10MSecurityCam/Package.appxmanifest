@@ -5,7 +5,7 @@
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
   IgnorableNamespaces="uap mp">
 
-  <Identity Name="W10MSecurityCam" Publisher="CN=W10MSecurityCam" Version="1.9.48.0" />
+  <Identity Name="W10MSecurityCam" Publisher="CN=W10MSecurityCam" Version="1.9.49.0" />
   <mp:PhoneIdentity PhoneProductId="f28d6867-338a-434a-8789-29db4aa27619" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>

@@ -151,8 +151,7 @@ namespace W10MSecurityCam
         /// <summary>A tap on a pill opens the Network and login section, where the addresses and switches are.</summary>
         private void ServicePill_Tapped(object sender, Windows.UI.Xaml.Input.TappedRoutedEventArgs e)
         {
-            NetworkPanel.Visibility = Visibility.Visible;
-            NetworkFold.Content = "NETWORK AND LOGIN  ▾";
+            SetFold(NetworkFold, true);
         }
 
         /// <summary>log=on|off, stats=on|off (the web page can switch these; the web page itself only on the phone). Network thread.</summary>

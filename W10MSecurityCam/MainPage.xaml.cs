@@ -462,14 +462,20 @@ namespace W10MSecurityCam
         private bool PanelOnScreen => false;
 
         /// <summary>Folding section headers: Tag is "PanelName|LABEL".</summary>
-        private void Fold_Click(object sender, RoutedEventArgs e)
+        /// <summary>A drawer's header band: Tag = "PanelName|ArrowName". Open = the body shows and the band keeps only its top corners round.</summary>
+        private void Fold_Tapped(object sender, Windows.UI.Xaml.Input.TappedRoutedEventArgs e)
         {
-            var b = (Button)sender;
-            var parts = ((string)b.Tag).Split('|');
-            if (!(FindName(parts[0]) is UIElement panel)) return;
-            bool open = panel.Visibility != Visibility.Visible;
-            panel.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
-            b.Content = parts[1] + (open ? "  ▾" : "  ▸");
+            var head = (Border)sender;
+            if (!(FindName(((string)head.Tag).Split('|')[0]) is UIElement panel)) return;
+            SetFold(head, panel.Visibility != Visibility.Visible);
+        }
+
+        private void SetFold(Border head, bool open)
+        {
+            var parts = ((string)head.Tag).Split('|');
+            if (FindName(parts[0]) is UIElement panel) panel.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
+            if (FindName(parts[1]) is TextBlock arrow) arrow.Text = open ? "▾" : "▸";
+            head.CornerRadius = open ? new CornerRadius(8, 8, 0, 0) : new CornerRadius(8);
         }
 
         /// <summary>Any touch on the page (handled or not) keeps a woken screen awake and a shown picture showing.</summary>
