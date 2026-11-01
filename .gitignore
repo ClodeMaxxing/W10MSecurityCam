@@ -36,3 +36,6 @@ release/
 tools/portal-monitor.csv
 tools/dump/
 tools/soak/
+
+# the install notes shipped in the release zip (tools\Make-Release.ps1)
+!tools/INSTALL.txt
