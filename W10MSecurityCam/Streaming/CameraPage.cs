@@ -61,8 +61,9 @@ a{color:#9cf0b0}
 .bar .n{font-size:14px;font-weight:500;color:#d8f5dc}.bar .s{font-size:11px;letter-spacing:.5px;color:#7fae86;font-family:Consolas,'Cascadia Mono',monospace}
 .bar.on:before{background:#39ff14}.bar.on .s{color:#39ff14}
 .bar.dis,.sw.dis{opacity:.45;pointer-events:none}
-.dr{background:#071109;border:1px solid #1f3a26;border-radius:8px;margin:0 0 6px;overflow:hidden}
-.dh{display:flex;justify-content:space-between;align-items:center;padding:10px;background:#0a160d;color:#a8f0b0;font-weight:600;letter-spacing:1px;font-size:13px;cursor:pointer;user-select:none}
+.dr{background:#071109;border:1px solid #1f3a26;border-radius:8px;margin:0 0 6px}
+.dh{display:flex;justify-content:space-between;align-items:center;padding:10px;background:#0a160d;color:#a8f0b0;font-weight:600;letter-spacing:1px;font-size:13px;cursor:pointer;user-select:none;border-radius:7px 7px 0 0}
+.dh.c{border-radius:7px}
 .dh i{font-style:normal;color:#a8f0b0}
 .db{padding:6px 8px 4px;border-top:1px solid #1f3a26}
 .sw{position:relative;display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:40px;border:1px solid #142a1a;border-radius:6px;background:#0a160d;padding:7px 9px 7px 15px;margin:0 0 4px;cursor:pointer;user-select:none;overflow:hidden}
@@ -73,7 +74,7 @@ a{color:#9cf0b0}
 .fld{border:1px solid #142a1a;border-radius:6px;background:#0a160d;padding:6px 9px 7px;margin:0 0 4px}
 .fld b{display:block;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#6f8f77;font-weight:600}
 .fld code{display:block;font-family:Consolas,'Cascadia Mono',monospace;font-size:12px;color:#cfffd2;margin-top:3px;word-break:break-all;user-select:all}
-.pk{position:relative;cursor:pointer;user-select:none}.pk.open{border-color:#39ff14}.pk.dis{opacity:.5;pointer-events:none}
+.pk{position:relative;cursor:pointer;user-select:none}.pk.open{border-color:#39ff14;z-index:30}.pk.dis{opacity:.5;pointer-events:none}
 .pk .pv{display:flex;justify-content:space-between;align-items:center;font-family:Consolas,'Cascadia Mono',monospace;font-size:14px;color:#cfffd2;margin-top:3px}
 .pk .pv i{font-style:normal;color:#3fbf5f}
 .pk .list{display:none;position:absolute;left:-1px;right:-1px;top:100%;margin-top:3px;background:#071109;border:1px solid #39ff14;border-radius:6px;z-index:20;overflow:hidden;max-height:320px;overflow-y:auto;box-shadow:0 8px 20px rgba(0,0,0,.7)}
@@ -330,7 +331,7 @@ $('lb').onclick=function(){
  var hs=document.querySelectorAll('.dh');
  for(var i=0;i<hs.length;i++)(function(h){
   var name=h.getAttribute('data-f'),body=$(name);
-  function show(open){body.style.display=open?'':'none';h.lastElementChild.textContent=open?'▾':'▸';if(open&&name==='details')load()}
+  function show(open){body.style.display=open?'':'none';h.className='dh'+(open?'':' c');h.lastElementChild.textContent=open?'▾':'▸';if(open&&name==='details')load()}
   show(saved[name]===true);
   h.onclick=function(){var open=body.style.display==='none';show(open);saved[name]=open;try{localStorage.setItem('w10m-fold2',JSON.stringify(saved))}catch(e){}}
  })(hs[i]);
