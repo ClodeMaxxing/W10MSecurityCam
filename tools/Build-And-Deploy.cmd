@@ -8,10 +8,10 @@ if exist "%~dp0phone-ip.txt" set /p PHONE=<"%~dp0phone-ip.txt"
 if not defined PHONE echo  Tip: put the phone's IP address in tools\phone-ip.txt for the Wi-Fi fallback
 echo Started %date% %time% > "%LOG%"
 
-rem MSBuild of the newest Visual Studio with MSBuild installed; the 2019 Community path if vswhere is missing
+rem MSBuild of Visual Studio 2019 (2022 may not build these ARM .NET Native projects); the 2019 Community path if vswhere is missing
 set MSBUILD=
 set VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe
-if exist "%VSWHERE%" for /f "usebackq delims=" %%i in (`"%VSWHERE%" -latest -requires Microsoft.Component.MSBuild -find MSBuild\**\Bin\MSBuild.exe`) do if not defined MSBUILD set "MSBUILD=%%i"
+if exist "%VSWHERE%" for /f "usebackq delims=" %%i in (`"%VSWHERE%" -latest -version [16.0^,17.0^) -products * -find MSBuild\**\Bin\MSBuild.exe`) do if not defined MSBUILD set "MSBUILD=%%i"
 if not defined MSBUILD set MSBUILD=%ProgramFiles(x86)%\Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin\MSBuild.exe
 echo MSBuild: %MSBUILD% >> "%LOG%"
 if not exist "%MSBUILD%" (
