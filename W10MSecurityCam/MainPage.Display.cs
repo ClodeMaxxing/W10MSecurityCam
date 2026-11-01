@@ -113,7 +113,11 @@ namespace W10MSecurityCam
         /// UI thread. Refreshed from the settings load, every display change and once a second.
         /// </summary>
         private volatile bool _svPreview, _svKeepPreview, _svPowerSave = true;
-        private void SnapshotDisplaySwitches() { _svPreview = PreviewToggle.IsOn; _svKeepPreview = KeepPreviewToggle.IsOn; _svPowerSave = PowerSaveToggle.IsOn; }
+        private void SnapshotDisplaySwitches()
+        {
+            if (PreviewToggle == null || KeepPreviewToggle == null || PowerSaveToggle == null) return; // the XAML still loads (the screensaver handler fires early)
+            _svPreview = PreviewToggle.IsOn; _svKeepPreview = KeepPreviewToggle.IsOn; _svPowerSave = PowerSaveToggle.IsOn;
+        }
 
         private void DisplayTick()
         {
