@@ -559,27 +559,29 @@ namespace W10MSecurityCam
 
         private string _resLabelKey, _resLabel; // the resolution pill ("4K30") for _currentFormatKey
 
-        /// <summary>The status card: dot and state, resolution and viewer pills, big fps / Mbps, engine line.</summary>
+        /// <summary>The status card: the stream row (light and state), the four stream tiles (fps, Mbps, format, viewers), engine line.</summary>
         private void UpdateStatusCard(bool streaming)
         {
             int viewers = _server.ClientCount;
-            ViewersText.Text = viewers + (viewers == 1 ? " viewer" : " viewers");
             StateText.Text = _protect ? "HEAT PROTECTION" : streaming ? "STREAMING" : "STOPPED";
-            StateText.Foreground = _protect ? Brush(0xFF, 0x6B, 0x6B) : Brush(0x9C, 0xF0, 0xB0);
+            StateText.Foreground = _protect ? Brush(0xFF, 0x6B, 0x6B) : streaming ? Brush(0x9C, 0xF0, 0xB0) : Brush(0x8F, 0xB5, 0x96);
             // the recording light: red while streaming (pulsing), dark red when stopped
             StatusDot.Fill = streaming ? Brush(0xFF, 0x30, 0x30) : Brush(0x3A, 0x14, 0x14);
             StatusDot.Stroke = streaming ? Brush(0xFF, 0x80, 0x80) : Brush(0x5A, 0x20, 0x20);
-            ViewersPill.Visibility = streaming ? Visibility.Visible : Visibility.Collapsed;
             if (_resLabelKey != _currentFormatKey)
             {
                 _resLabelKey = _currentFormatKey; // parsed again only when the format changes
                 var m = System.Text.RegularExpressions.Regex.Match(_currentFormatKey ?? "", @"^(\d+)x(\d+)@(\d+)");
                 _resLabel = m.Success ? (int.Parse(m.Groups[2].Value) >= 2160 ? "4K" : m.Groups[2].Value + "p") + m.Groups[3].Value : null;
             }
-            ResPill.Visibility = streaming && _resLabel != null ? Visibility.Visible : Visibility.Collapsed;
-            if (_resLabel != null) ResText.Text = _resLabel;
-            StatsText.Visibility = streaming ? Visibility.Visible : Visibility.Collapsed;
-            if (streaming) StatsText.Text = string.Format("{0,2:0} fps {1,4:0.0} Mbps", _camera.Fps, _camera.Mbps);
+            // the four stream tiles: live numbers while streaming, the chosen format while stopped
+            var dim = Brush(0x7F, 0xAE, 0x86); var bright = Brush(0xFF, 0xFF, 0xFF);
+            FpsTileText.Text = streaming ? _camera.Fps.ToString("0") : "-";
+            MbpsTileText.Text = streaming ? _camera.Mbps.ToString("0.0") : "-";
+            ResText.Text = _resLabel ?? "-";
+            ViewersText.Text = streaming ? viewers.ToString() : "-";
+            FpsTileText.Foreground = MbpsTileText.Foreground = ViewersText.Foreground = streaming ? bright : dim;
+            ResText.Foreground = _resLabel != null ? bright : dim;
             NormalModeButton.Visibility = _camera != null && !_camera.UseNativeSink ? Visibility.Visible : Visibility.Collapsed; // safe mode: the way back
             UpdateServicePills(streaming);
             if (!_blackedOut || BlackoutOverlay.Visibility != Visibility.Visible) UpdateTiles(streaming); // nobody sees them under the black overlay
