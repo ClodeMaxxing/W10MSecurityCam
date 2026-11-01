@@ -103,7 +103,7 @@ button.tog.on{background:#18452b;color:#39ff14;border-color:#39ff14;box-shadow:0
 <div><label><input type='checkbox' id='sf'> Hold focus once it has settled</label></div></div></div>
 <h2>Login</h2>
 <div class='row'><div class='sub' style='margin-bottom:6px'><span id='lmsg'>One login protects the stream and this page.</span><i class='tip' data-tip='Use the new login in your NVR / VLC: rtsp://USER:PASSWORD@phone-address:8554/live. The browser asks you to sign in again after a change.'>i</i></div>
-<input id='lu' placeholder='User name'> <input id='lp' type='password' placeholder='New password'> <input id='lp2' type='password' placeholder='Repeat password'>
+<input id='lc' type='password' placeholder='Current password'> <input id='lu' placeholder='User name'> <input id='lp' type='password' placeholder='New password'> <input id='lp2' type='password' placeholder='Repeat password'>
 <button id='lb'>Change login</button></div>
 <div id='msg'></div><div id='tipbox'></div>
 <script>
@@ -222,9 +222,11 @@ $('lb').onclick=function(){
  var u=$('lu').value.trim(),p=$('lp').value;
  if(p!==$('lp2').value){$('msg').textContent='The two passwords differ';return}
  if(p.length<8){$('msg').textContent='The password needs at least 8 characters';return}
- $('lp').value=$('lp2').value='';
- send('user='+encodeURIComponent(u||'admin')+'&password='+encodeURIComponent(p));
- $('msg').textContent='Login changed - sign in again with the new login'
+ if(!$('lc').value){$('msg').textContent='Enter the current password too';return}
+ var c=$('lc').value;
+ $('lc').value=$('lp').value=$('lp2').value='';
+ send('current='+encodeURIComponent(c)+'&user='+encodeURIComponent(u||'admin')+'&password='+encodeURIComponent(p));
+ $('msg').textContent='Changing the login - if it worked, sign in again with the new login'
 };
 $('tt').onchange=function(){send('torch='+(this.checked?'on':'off'))};
 $('sall').onchange=function(){send('savepower='+(this.checked?'on':'off'))};

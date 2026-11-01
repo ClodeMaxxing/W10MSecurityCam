@@ -80,7 +80,11 @@ namespace W10MSecurityCam.Streaming
                         string refused = RefuseForeignPost(r);
                         if (refused != null) return Reply(403, "Forbidden", "text/plain", refused);
                         var form = ParseForm(r.Body); // changes only in the body, never in the URL
-                        string result = await ApplyConfig(form);
+                        // As on the web page: a login change needs the current password too ("current" field).
+                        string note = CheckCurrentPassword(form, form);
+                        form.Remove("current");
+                        string result = form.Count > 0 ? await ApplyConfig(form) : "";
+                        if (note != null) result = note + (result.Length > 0 ? "\n" + result : "");
                         return Reply(200, "OK", "text/plain; charset=utf-8", result + "\n\n" + GetConfig());
                     }
                     return Reply(200, "OK", "text/plain; charset=utf-8", GetConfig());
@@ -118,7 +122,7 @@ namespace W10MSecurityCam.Streaming
                 var only = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 foreach (var k in new[] { "camera", "focus", "exposure", "wb", "format", "bitrate", "highbw", "powersave", "stream", "engine", "user", "password", "savepower", "saveois", "savefocus", "probe", "torch" })
                     if (all.TryGetValue(k, out var v)) only[k] = v;
-                string bad = CheckLoginFields(only);
+                string bad = CheckLoginFields(only) ?? CheckCurrentPassword(only, all);
                 if (bad != null) result = bad;
                 else if (ApplyConfig != null && only.Count > 0) result = await ApplyConfig(only);
             }
@@ -177,6 +181,18 @@ namespace W10MSecurityCam.Streaming
             }
             if (fromUsb) return name == "127.0.0.1" || name.Equals("localhost", StringComparison.OrdinalIgnoreCase);
             return System.Net.IPAddress.TryParse(name, out _);
+        }
+
+        /// <summary>
+        /// A login change from the web page needs the current password as well ("current" field): the request itself is
+        /// signed with it, but a signed request captured on the network could otherwise be replayed with a new password.
+        /// </summary>
+        private string CheckCurrentPassword(IDictionary<string, string> only, IDictionary<string, string> all)
+        {
+            if (!only.ContainsKey("user") && !only.ContainsKey("password")) return null;
+            if (Auth != null && Auth.IsCurrentPassword(all.TryGetValue("current", out var c) ? c : null)) return null;
+            only.Remove("user"); only.Remove("password");
+            return "Not changed: enter the current password to change the login";
         }
 
         private static string Header(HttpRequest r, string name) => r.Headers.TryGetValue(name, out var v) ? v : null;
