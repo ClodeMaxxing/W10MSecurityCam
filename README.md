@@ -20,10 +20,16 @@ camera at a time.
 |---|---|
 | Stream (Wi-Fi) | `rtsp://PHONE-IP:8554/live` (the app shows the IP) |
 | Stream (USB) | `rtsp://127.0.0.1:8020/live` |
-| Settings page | `http://PHONE-IP:5001/camera` (over USB: `http://127.0.0.1:8020/camera`) |
-| Health | `http://PHONE-IP:5001/status` (JSON: fps, bitrate, viewers, battery, memory, Wi-Fi signal, restarts) |
-| Log | `http://PHONE-IP:5001` |
-| Snapshot | `http://PHONE-IP:5001/snapshot.jpg` (only when turned on, see below) |
+| Settings page | `http://PHONE-IP:5001/camera` or just `http://PHONE-IP:5001` (over USB: `http://127.0.0.1:8020/camera`) |
+| Health | `http://PHONE-IP:5001/status` (JSON: fps, bitrate, viewers, battery and charger, heat, memory, Wi-Fi signal, restarts) |
+| Log | `http://PHONE-IP:5001/log` (with the *Log page* switch on) |
+| Stats | `http://PHONE-IP:5001/stats`: graphs of the last 12 hours, sampled every 30 s (with the *Stats page* switch on) |
+| Snapshot | `http://PHONE-IP:5001/snapshot.jpg` (only when turned on, see below; needs the login) |
+
+The pages, `/status` and the log can be read on the home network without a login (view only); changes, the snapshot
+and the stream need it (see Login). Under *Network and login* on the phone, the **web page** is on by default (it is
+the way to set the camera up without a cable), the **log page** and the **stats page** are off until switched on there
+or on the settings page; a page that is off answers 403. The stream is never affected by these switches.
 
 Video is H.264 (track 1); with microphone audio on, there is also an AAC track (48 kHz mono,
 about 96 kbps). Both are sent as RTP over the RTSP TCP connection. Choose TCP in the NVR if it
@@ -57,9 +63,11 @@ remembers the choice in that browser. Explanations sit behind small (i) icons: h
 
 - **Status:** a card with the state (Streaming / Stopped / Heat protection, with a pulsing dot), resolution, uptime and
   viewer count, large fps and Mbps figures, and tiles with graphs: battery bar, Wi-Fi bars, temperature badge (Healthy /
-  Unstable), phone and app CPU, app memory, engine badge (Fast / Safe mode), encoder latency, and power (watts into or
-  out of the battery on a 0-15 W bar). A tile turns amber or red when it needs attention. An amber notice appears while
-  the default login is in use, a red one for heat.
+  Paused / Hot / Protect), phone and app CPU, app memory, engine badge (Fast / Safe mode), encoder latency, and power
+  (watts into or out of the battery on a 0-15 W bar). A tile turns amber or red when it needs attention: the battery
+  bar goes red when the battery is draining although the phone says "Charging" (judged every second from the power
+  reading: a PC USB port often can't keep up with 4K). Amber notices appear while the default login is in use and when
+  the charger is insufficient (with the watts), a red one for heat.
 - **Video:** resolution/fps, bitrate and a **High BW** toggle on one line, Start/Stop stream, and **Stream addresses**,
   a pop-up with the Wi-Fi and USB stream addresses, this page over USB and the live log.
   Changing resolution or bitrate starts the stream, or restarts it if it is running.
@@ -71,7 +79,9 @@ remembers the choice in that browser. Explanations sit behind small (i) icons: h
   the stream once.
 
 **The phone screen while streaming** is black with the preview off, whatever you change on the web page. The main
-screen holds Start/Stop, the status card, **Show camera picture (60 s)**, **Black out the screen now** and any warning;
+screen holds **Start/Stop RTSP stream**, the **service pills** (RTSP over Wi-Fi with its address and viewers, RTSP over
+USB, and the web page: green while streaming, grey when stopped; a tap opens *Network and login*), the status card,
+**Show camera picture (60 s)**, **Black out the screen now**, **Return to normal mode** in safe mode, and any warning;
 Video, Camera, Power, Network and login, and Details and log fold away. Tapping the black screen shows the status for
 15 seconds with no restart. **Show camera picture** (or touching a camera control) shows the picture until 60 seconds
 after your last touch; **Black out the screen now** ends it straight away. The preview can only start or stop while the
@@ -80,18 +90,22 @@ a second or two for the NVR. Keeping the preview running behind the black screen
 the app's CPU use (12% to 24%) and raised the battery draw. The start/stop chirp is Windows' own recording sound; it
 follows the phone's Ringer + notifications volume.
 
-Everything on the page needs the login (see Login below), over the USB cable too: any program or web page on the PC
-the phone is plugged into can reach the USB port.
+The page can be read without the login (a *View only* notice with a *Log in* button shows); changes need the login
+(see Login below), over the USB cable too: any program or web page on the PC the phone is plugged into can reach the
+USB port. The page reloads itself after an app update.
 
 **High bandwidth mode** unlocks bitrates above 24 Mbps (up to 60). It needs 5 GHz Wi-Fi or a USB-C connection; at
 60 Mbps on 2.4 GHz the stream drops frames. Auto bitrate is capped at 16 Mbps (40 Mbps in high bandwidth mode).
 
 **Temperature and heat protection:** Windows 10 Mobile gives apps no temperature reading, and the frame rate does not
 show heat (it stayed at 25 fps while Windows warned of overheating). The app uses the charging state instead: if
-charging pauses ("Idle") on a charger Windows reports as adequate, with the battery below 95%, for 20 seconds, the
-temperature reads **Unstable** and *heat protection* switches on. It forces the power-saving options on (screen blackout,
-preview off, stabilization off, held focus), lowers the video to 1080p at 6 Mbps (restored afterwards), locks the flashlight and shows a red warning on the phone and the web page.
-After 30 seconds of charging again your own settings come back; the flashlight stays off but can be used again.
+charging pauses ("Idle") on a charger Windows reports as adequate, with the battery below 95%, the temperature badge
+reads **Paused** (amber); after 20 seconds of that it reads **Hot** and *heat protection* switches on, with a chime
+and a vibration. It forces the power-saving options on (screen blackout, preview off, stabilization off, held focus),
+lowers the video to 1080p at 6 Mbps (restored afterwards), locks the flashlight and shows a red warning on the phone
+and the web page. The usual cause is a charger that can't keep up (a PC USB port or a small adapter; use 2 A or more).
+After 30 seconds of charging again (and at least 3 minutes) your own settings come back, with a short chime; the
+flashlight stays off but can be used again.
 Windows can still stop the app first if it overheats quickly; the app then restarts into heat protection.
 
 **Safe mode:** after a crash or two stalls the app uses the slower MP4 engine, limited to 1080p. The page says so and
@@ -102,12 +116,12 @@ login is kept). The log says "SELF-CHECK".
 
 ## Login
 
-One login protects everything on the phone, over Wi-Fi and over the USB cable alike: the RTSP stream, the settings
-page, `/status`, the log, `/config` and snapshots. A fresh install uses **admin / admin**; the phone screen and the
-settings page warn until you change it.
+One login protects the RTSP stream, every change (the settings page, `/config`) and the snapshot, over Wi-Fi and over
+the USB cable alike; reading the page, `/status`, the log and the stats needs no login (view only). A fresh install
+uses **admin / admin**; the phone screen and the settings page warn until you change it.
 
-- **Settings page:** open `http://PHONE-IP:5001/camera`, sign in, and use the **Login** section at the bottom (user name,
-  new password twice, 8-64 characters). Your browser asks you to sign in again afterwards.
+- **Settings page:** open `http://PHONE-IP:5001/camera`, press **Log in**, and use the **Login** section at the bottom
+  (current password, user name, new password twice, 8-64 characters). Your browser asks you to sign in again afterwards.
 - **On the phone:** tap the screen to wake it, open **Network and login**, enter a user name and password under "Login
   (stream and web page)" and tap **Save login**. An empty password resets the login to admin / admin (it is never
   turned off).
@@ -182,9 +196,12 @@ is shown by `/config`. `http://127.0.0.1:8020/config` shows the current values (
 `tools\Soak-Monitor.ps1` records the camera's status on the PC for as long as it runs:
 
 ```
-powershell -ExecutionPolicy Bypass -File tools\Soak-Monitor.ps1                 (phone address from tools\phone-ip.txt)
-powershell -ExecutionPolicy Bypass -File tools\Soak-Monitor.ps1 -Every 15 -User admin -Password secret
+powershell -ExecutionPolicy Bypass -File tools\Soak-Monitor.ps1                               (over the USB cable)
+powershell -ExecutionPolicy Bypass -File tools\Soak-Monitor.ps1 -Phone 192.168.0.50 -Every 15   (over Wi-Fi)
 ```
+
+It reads `/status` without a login (the same script serves W10MSecurityCam, W10MDashcam and W10MWebCam); the phone log
+is collected only while the *Log page* switch is on.
 
 Every sample (default 30 s) goes to `tools\soak\soak-DATE.csv`: streaming, fps, Mbps, viewers, format, engine,
 latency, battery %, charging, watts, heat, heat protection, phone and app CPU, memory, Wi-Fi, uptime, screen and

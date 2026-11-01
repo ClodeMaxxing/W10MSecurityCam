@@ -3,6 +3,50 @@
 Release 1.0 is the first version considered complete for this fork. Build numbers 1.0-1.9 before it were the
 development steps; they are kept in the history table for reference.
 
+## Release 1.3 (build 1.9.33.0)
+
+Feature parity with W10MWebCam and W10MDashcam: what one app of the family did better now exists in all three where it
+applies. The stream, the login and the RTSP transport are unchanged.
+
+**What you notice**
+- **The battery tile turns red when the battery is draining although the phone says "Charging"** (a PC USB port with
+  4K), judged every second from the power reading: Charging and the 5-minute average below −0.3 W. Before, the level
+  had to drop 2 % over 20 minutes. The amber **charger-insufficient notice** with the watts is new under the status card,
+  on the web page and in `/status` (`chargerNotice`); the web page's battery bar turns red too.
+- **Temp badge in three levels:** *Paused* (amber) the moment charging pauses, *Hot* (red) after 20 s, *Protect* (red)
+  while heat protection is on. Before, a one-second pause flashed the badge red. The heat texts now read as in the
+  other apps ("Heat protection: ..." and the usual cause, a charger that can't keep up).
+- **A chime and a vibration** when heat protection sets in, and a short one when charging resumes.
+- **Service pills under the start button:** RTSP over Wi-Fi (address and viewers), RTSP over USB, and the web page,
+  green while streaming and grey when stopped; a tap opens *Network and login*. The button says *Start RTSP stream*.
+- **Web page, log page and stats page switches** under *Network and login*: the web page is on by default (it is the way
+  to set the camera up without a cable), the log page (`/log`) and the new **stats page** (`/stats`, the last 12 hours
+  of frame rate, bitrate, latency, viewers, battery, power, CPU, memory, Wi-Fi and heat as graphs, a sample every 30 s
+  while on) are off until switched on, on the phone or on the settings page. The settings page is now served at `/` as
+  well; the log moved to `/log`. A page that is off answers 403.
+- **View only without the login:** the settings page, `/camera/state`, `/status`, the log and the stats can be read on
+  the home network without logging in; changes, the snapshot and `/login` need the login (the browser asks). The page
+  shows a *View only* notice with a *Log in* button.
+- **Changing the login needs the current password** (new *Current password* box, `current=` over USB), as in W10MDashcam.
+- The phone's **addresses follow network changes** (a new DHCP lease, another Wi-Fi network).
+- **Return to normal mode** button on the phone while the app is in safe mode (the MP4 engine after a crash or two
+  stalls); before, only the web page could do that.
+- The camera and power-saving options are toggle switches, as in the other apps.
+
+**Under the hood**
+- `/status` also carries W10MWebCam's field names (`uptime`, `battery`, `charging`, `onExternalPower`, `latencyMs`,
+  `wifiBars`, `cpuPhone`, `cpuApp`, `heat`, `heatBadge`, `heatLevel`, `protect`, `alert`, `blackout`, `previewing`,
+  `torchOn`, `webOn`, `logOn`, `statsOn`, ...); the older names stay. `charging` means current flows in (Charging), the
+  new `onExternalPower` means a charger is connected (Charging or Idle).
+- Changes (`/camera/set`, `/config`) are read from the request body only, never from the URL.
+- The web page reloads itself after an app update.
+- Three previous sessions' logs are kept (`log-previous.txt`, `-2`, `-3`), each headed CRASHED, closed normally or
+  ended abruptly; a clean close writes "App suspended" so the difference can be told.
+- `tools\Soak-Monitor.ps1` is the same script in all three repositories (reads `/status` without a login, collects the
+  phone log every 5 minutes while the log page is on); `tools\Make-Release.ps1` packs the release zip and SHA256SUMS.
+- New partials `MainPage.Power.cs` and `MainPage.Servers.cs`, as in W10MDashcam; the project references the Windows
+  Mobile Extensions for the vibration API.
+
 ## Release 1.2 (build 1.9.31.0)
 
 **What you notice**
