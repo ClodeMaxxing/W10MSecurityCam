@@ -418,7 +418,7 @@ namespace W10MSecurityCam
                     _tuning.FrameLimitMs = 1000.0 / Math.Max(1, f.Fps);
                     await Task.Delay(2500); // let the first frames flow before touching the camera controls again
                     await ApplyTuningAsync(true);
-                    StartButton.Content = "Stop streaming";
+                    StartButton.Content = "Stop RTSP stream";
                     await ApplyBlackoutAsync();
                     if (!_keepAwake) { _displayRequest.RequestActive(); _keepAwake = true; }
                 }
@@ -452,7 +452,7 @@ namespace W10MSecurityCam
 
         private void StopUi()
         {
-            StartButton.Content = "Start streaming";
+            StartButton.Content = "Start RTSP stream";
             if (_keepAwake) { _displayRequest.RequestRelease(); _keepAwake = false; }
         }
 
@@ -780,6 +780,7 @@ namespace W10MSecurityCam
             StatsText.Visibility = streaming ? Visibility.Visible : Visibility.Collapsed;
             if (streaming) StatsText.Text = string.Format("{0,2:0} fps {1,4:0.0} Mbps", _camera.Fps, _camera.Mbps);
             NormalModeButton.Visibility = _camera != null && !_camera.UseNativeSink ? Visibility.Visible : Visibility.Collapsed; // safe mode: the way back
+            UpdateServicePills(streaming);
             if (!_blackedOut || BlackoutOverlay.Visibility != Visibility.Visible) UpdateTiles(streaming); // nobody sees them under the black overlay
             // the pulse only runs while someone can see it
             bool pulse = streaming && !_blackedOut;

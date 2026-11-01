@@ -98,6 +98,32 @@ namespace W10MSecurityCam
             WebAddressText.Text = string.Join("\n", lines);
         }
 
+        // ---------------------------------------------------------------- service pills (under the start button)
+
+        private static string ViewerCountText(int n) => n > 0 ? " · " + n + (n == 1 ? " viewer" : " viewers") : "";
+
+        /// <summary>Once a second (UpdateStatusCard): what streams where. Green while streaming, grey when stopped.</summary>
+        private void UpdateServicePills(bool streaming)
+        {
+            var on = streaming ? GreenFill : Brush(0x55, 0x55, 0x55);
+            var text = streaming ? Brush(0x9C, 0xF0, 0xB0) : Brush(0x7F, 0x9A, 0x86);
+            string ip = _ips.Count > 0 ? _ips[0] : null;
+            SvcWifiDot.Fill = SvcUsbDot.Fill = on;
+            SvcWifiText.Foreground = SvcUsbText.Foreground = text;
+            SvcWifiText.Text = (ip != null ? "RTSP Wi-Fi " + ip + ":" + RtspPort : "RTSP Wi-Fi (not connected)") + ViewerCountText(_server.ViewerCount(false));
+            SvcUsbText.Text = "RTSP USB 127.0.0.1:" + UsbPort + ViewerCountText(_server.ViewerCount(true));
+            SvcWebDot.Fill = _webOn ? GreenFill : Brush(0x55, 0x55, 0x55);
+            SvcWebText.Foreground = _webOn ? Brush(0x9C, 0xF0, 0xB0) : Brush(0x7F, 0x9A, 0x86);
+            SvcWebText.Text = "Web page " + (_webOn ? "ON" : "OFF");
+        }
+
+        /// <summary>A tap on a pill opens the Network and login section, where the addresses and switches are.</summary>
+        private void ServicePill_Tapped(object sender, Windows.UI.Xaml.Input.TappedRoutedEventArgs e)
+        {
+            NetworkPanel.Visibility = Visibility.Visible;
+            NetworkFold.Content = "NETWORK AND LOGIN  ▾";
+        }
+
         /// <summary>log=on|off, stats=on|off (the web page can switch these; the web page itself only on the phone). Network thread.</summary>
         private async Task ApplyServerConfigAsync(IDictionary<string, string> form, List<string> done)
         {

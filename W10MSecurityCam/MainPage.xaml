@@ -46,6 +46,29 @@
             <Setter Property="BorderBrush" Value="#2E7D46" />
             <Setter Property="BorderThickness" Value="1" />
         </Style>
+        <!-- Service pills under the start button: one line per transport (W10MSecurityCam and W10MWebCam). -->
+        <Style x:Key="ServicePill" TargetType="Border">
+            <Setter Property="Background" Value="#0B1A10" />
+            <Setter Property="BorderBrush" Value="#2E7D46" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="8,2,9,3" />
+            <Setter Property="Margin" Value="0,0,0,3" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+        </Style>
+        <Style x:Key="PillDot" TargetType="Ellipse">
+            <Setter Property="Width" Value="7" />
+            <Setter Property="Height" Value="7" />
+            <Setter Property="Margin" Value="0,0,6,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Fill" Value="#555555" />
+        </Style>
+        <Style x:Key="PillText" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Consolas" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="#9CF0B0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
     </Page.Resources>
 
     <Grid>
@@ -66,8 +89,20 @@
                 </Grid>
 
                 <!-- MAIN: what is needed day to day. Everything else folds away below. -->
-                <Button x:Name="StartButton" Content="Start streaming" HorizontalAlignment="Stretch"
+                <Button x:Name="StartButton" Content="Start RTSP stream" HorizontalAlignment="Stretch"
                         Margin="0,0,0,6" Click="StartButton_Click" IsEnabled="False" />
+                <!-- Service strip: what streams where, at a glance. Green dot = streaming; tap opens Network and login. -->
+                <StackPanel x:Name="ServiceStrip" Margin="0,0,0,6">
+                    <Border x:Name="SvcWifi" Style="{StaticResource ServicePill}" Tapped="ServicePill_Tapped">
+                        <StackPanel Orientation="Horizontal"><Ellipse x:Name="SvcWifiDot" Style="{StaticResource PillDot}" /><TextBlock x:Name="SvcWifiText" Style="{StaticResource PillText}" Text="RTSP Wi-Fi" /></StackPanel>
+                    </Border>
+                    <Border x:Name="SvcUsb" Style="{StaticResource ServicePill}" Tapped="ServicePill_Tapped">
+                        <StackPanel Orientation="Horizontal"><Ellipse x:Name="SvcUsbDot" Style="{StaticResource PillDot}" /><TextBlock x:Name="SvcUsbText" Style="{StaticResource PillText}" Text="RTSP USB" /></StackPanel>
+                    </Border>
+                    <Border x:Name="SvcWeb" Style="{StaticResource ServicePill}" Tapped="ServicePill_Tapped">
+                        <StackPanel Orientation="Horizontal"><Ellipse x:Name="SvcWebDot" Style="{StaticResource PillDot}" /><TextBlock x:Name="SvcWebText" Style="{StaticResource PillText}" Text="Web page" /></StackPanel>
+                    </Border>
+                </StackPanel>
                 <!-- Status card: state dot and label, resolution and viewer pills, then the big numbers. -->
                 <Border Background="#07140B" BorderBrush="#1F3A26" BorderThickness="1" CornerRadius="6" Padding="10,8,10,8" Margin="0,0,0,6">
                     <StackPanel>
@@ -248,7 +283,7 @@
                     </StackPanel>
                 </StackPanel>
 
-                <Button Style="{StaticResource FoldButton}" Tag="NetworkPanel|NETWORK AND LOGIN" Content="NETWORK AND LOGIN  &#x25B8;" Click="Fold_Click" />
+                <Button x:Name="NetworkFold" Style="{StaticResource FoldButton}" Tag="NetworkPanel|NETWORK AND LOGIN" Content="NETWORK AND LOGIN  &#x25B8;" Click="Fold_Click" />
                 <StackPanel x:Name="NetworkPanel" Visibility="Collapsed">
                     <TextBlock Text="RTSP address (NVR / VLC):" Foreground="#7F9A86" FontSize="12" />
                     <TextBlock x:Name="AddressText" Text="…" IsTextSelectionEnabled="True" TextWrapping="Wrap"

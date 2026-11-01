@@ -71,6 +71,8 @@ namespace W10MSecurityCam.Rtsp
 
         /// <summary>Number of viewers currently receiving video.</summary>
         public int ClientCount { get { lock (_lock) return _connections.Count(c => c.IsPlaying); } }
+        /// <summary>Viewers on one transport: the USB cable, or Wi-Fi (for the phone's service pills).</summary>
+        public int ViewerCount(bool fromUsb) { lock (_lock) return _connections.Count(c => c.IsPlaying && c.FromUsb == fromUsb); }
 
         public async Task StartAsync()
         {
