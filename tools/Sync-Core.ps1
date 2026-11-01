@@ -30,6 +30,7 @@ $Shared = @(
   @{ Path = 'Streaming\Mp4TapStream.cs';     Apps = $All }
   @{ Path = 'Streaming\PowerMonitor.cs';     Apps = $All }
   @{ Path = 'Streaming\CameraTuning.cs';     Apps = $All }
+  @{ Path = 'MainPage.Display.cs';           Apps = $All }
   @{ Path = 'Rtsp\DigestAuth.cs';            Apps = $ScDc }
   @{ Path = 'Rtsp\RtpPacketizer.cs';         Apps = $ScDc }
   @{ Path = 'Rtsp\Sdp.cs';                   Apps = $ScDc }
