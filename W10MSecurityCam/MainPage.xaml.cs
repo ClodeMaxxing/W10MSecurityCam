@@ -485,6 +485,14 @@ namespace W10MSecurityCam
         private bool PanelOnScreen => false;
 
         /// <summary>Folding section headers: Tag is "PanelName|LABEL".</summary>
+        /// <summary>A tap on a RowSwitch row flips its ToggleSwitch (the template has no knob, so the switch does not toggle by itself).</summary>
+        private void RowSwitch_Tapped(object sender, Windows.UI.Xaml.Input.TappedRoutedEventArgs e)
+        {
+            DependencyObject n = sender as DependencyObject;
+            while (n != null && !(n is ToggleSwitch)) n = Windows.UI.Xaml.Media.VisualTreeHelper.GetParent(n);
+            if (n is ToggleSwitch sw && sw.IsEnabled) { sw.IsOn = !sw.IsOn; e.Handled = true; }
+        }
+
         /// <summary>A drawer's header band: Tag = "PanelName|ArrowName". Open = the body shows and the band keeps only its top corners round.</summary>
         private void Fold_Tapped(object sender, Windows.UI.Xaml.Input.TappedRoutedEventArgs e)
         {

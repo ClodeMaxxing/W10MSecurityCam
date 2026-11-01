@@ -171,7 +171,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleSwitch">
-                        <Border x:Name="RowRoot" Background="#0A160D" BorderBrush="#142A1A" BorderThickness="1" CornerRadius="6" MinHeight="40">
+                        <Border x:Name="RowRoot" Background="#0A160D" BorderBrush="#142A1A" BorderThickness="1" CornerRadius="6" MinHeight="40" Tapped="RowSwitch_Tapped">
                             <Grid>
                                 <VisualStateManager.VisualStateGroups>
                                     <VisualStateGroup x:Name="CommonStates">
@@ -187,7 +187,9 @@
                                         <VisualState x:Name="Off" />
                                         <VisualState x:Name="On">
                                             <Storyboard>
-                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetName="RowLight" Storyboard.TargetProperty="Background"><DiscreteObjectKeyFrame KeyTime="0" Value="#39FF14" /></ObjectAnimationUsingKeyFrames>
+                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetName="RowLight" Storyboard.TargetProperty="Background">
+                                                    <DiscreteObjectKeyFrame KeyTime="0"><DiscreteObjectKeyFrame.Value><SolidColorBrush Color="#39FF14" /></DiscreteObjectKeyFrame.Value></DiscreteObjectKeyFrame>
+                                                </ObjectAnimationUsingKeyFrames>
                                                 <ObjectAnimationUsingKeyFrames Storyboard.TargetName="RowOff" Storyboard.TargetProperty="Visibility"><DiscreteObjectKeyFrame KeyTime="0" Value="Collapsed" /></ObjectAnimationUsingKeyFrames>
                                                 <ObjectAnimationUsingKeyFrames Storyboard.TargetName="RowOn" Storyboard.TargetProperty="Visibility"><DiscreteObjectKeyFrame KeyTime="0" Value="Visible" /></ObjectAnimationUsingKeyFrames>
                                             </Storyboard>
