@@ -65,6 +65,7 @@ EncodedFrameSink::~EncodedFrameSink()
 
 Windows::Media::IMediaExtension^ EncodedFrameSink::MediaExtension::get()
 {
+    _callbackErrors = 0; // handed out for each stream start: report handler errors again in this session
     if (!_hooked)
     {
         _hooked = true;
@@ -106,8 +107,15 @@ void EncodedFrameSink::RaiseFrame(const BYTE* data, DWORD length, LONGLONG sampl
     // (crash dump: 0xC0000409 fast-fail in ucrtbase), so catch everything and report it as a log line instead.
     try
     {
-        auto copy = ref new Array<uint8>(const_cast<uint8*>(data), length);
-        FrameReceived(copy, sampleTime, keyframe, queueDelay, deviceLatency);
+        if (length == 0 || data == nullptr)
+        {
+            FrameReceived(ref new Array<uint8>(0u), sampleTime, keyframe, queueDelay, deviceLatency);
+            return;
+        }
+        // No copy here: the interop layer copies the bytes into the C# handler's own byte[], and the
+        // reference is only used during this call (the worker owns the buffer until the call returns).
+        ArrayReference<uint8> frame(const_cast<uint8*>(data), length);
+        FrameReceived(frame, sampleTime, keyframe, queueDelay, deviceLatency);
     }
     catch (Platform::Exception^ e) { ReportCallbackError(L"video frame", e->HResult); }
     catch (...) { ReportCallbackError(L"video frame", 0); }

@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "EncodedMediaSink.h"
+#include <algorithm>
 
 using namespace Microsoft::WRL;
 using namespace W10MSecurityCam::Native;
@@ -152,7 +153,8 @@ void EncodedMediaSink::DeliverFrame(const BYTE* data, DWORD length, LONGLONG sam
         if (_videoQueued >= 3)
         {
             _dropped += _videoQueued;
-            _queue.clear();
+            // only the video backlog: queued audio frames are small and stay in order
+            _queue.erase(std::remove_if(_queue.begin(), _queue.end(), [](const PendingFrame& p) { return !p.audio; }), _queue.end());
             _videoQueued = 0;
             _waitForKeyframe = true;
             dropped = true;
