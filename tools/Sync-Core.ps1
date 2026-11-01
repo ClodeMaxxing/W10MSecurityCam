@@ -56,7 +56,7 @@ $Expected = @{
     )
     Missing = @(
       '// ---- camera power saving (less processing and heat; each part can be switched off)'
-      'public bool SaveOis = true, SaveFocus = true;'
+      'public bool SaveOis = true, SaveFocus = false; // the automatic focus hold is off by default (Focus once and lock does it by hand)'
       '// reading at the end stop is replaced by the last sensible one (switching to manual showed "focus 0" and a'
       '// blurred picture; fix from APP).'
     )
