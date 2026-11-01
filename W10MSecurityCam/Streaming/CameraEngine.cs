@@ -91,7 +91,8 @@ namespace W10MSecurityCam.Streaming
 
         // stats
         private readonly Stopwatch _clock = Stopwatch.StartNew();
-        private long _frames, _bytes, _lastStatTicks, _lastFrames, _lastBytes;
+        private long _frames, _bytes; // written on the encoder thread, read on the UI thread: Interlocked only (64-bit on ARM)
+        private long _lastStatTicks, _lastFrames, _lastBytes;
         private double _lastIdrSec = -1;
         public double Fps { get; private set; }
         public double Mbps { get; private set; }
@@ -349,7 +350,9 @@ namespace W10MSecurityCam.Streaming
             _lastPps = _config.Pps[0];
             ParameterSetsReady?.Invoke(_lastSps, _lastPps);
 
-            _frames = _bytes = _lastFrames = _lastBytes = 0;
+            System.Threading.Interlocked.Exchange(ref _frames, 0);
+            System.Threading.Interlocked.Exchange(ref _bytes, 0);
+            _lastFrames = _lastBytes = 0;
             _lastStatTicks = _clock.ElapsedTicks;
             _lastIdrSec = -1;
             _mp4Pending.Clear();
@@ -606,11 +609,11 @@ namespace W10MSecurityCam.Streaming
         /// <summary>Statistics only (fps, Mbps, keyframe interval).</summary>
         private void CountNal(byte[] nal, int type)
         {
-            _bytes += nal.Length + 4;
+            System.Threading.Interlocked.Add(ref _bytes, nal.Length + 4);
             bool firstSlice = (type == 1 || type == 5) && nal.Length > 1 && (nal[1] & 0x80) != 0;
             if (firstSlice)
             {
-                _frames++;
+                System.Threading.Interlocked.Increment(ref _frames);
                 if (type == 5)
                 {
                     double now = _clock.Elapsed.TotalSeconds;
@@ -626,7 +629,7 @@ namespace W10MSecurityCam.Streaming
             long now = _clock.ElapsedTicks;
             double sec = (now - _lastStatTicks) / (double)Stopwatch.Frequency;
             if (sec <= 0) return;
-            long f = _frames, b = _bytes;
+            long f = System.Threading.Interlocked.Read(ref _frames), b = System.Threading.Interlocked.Read(ref _bytes);
             Fps = (f - _lastFrames) / sec;
             Mbps = (b - _lastBytes) * 8 / sec / 1e6;
             _lastFrames = f; _lastBytes = b; _lastStatTicks = now;
