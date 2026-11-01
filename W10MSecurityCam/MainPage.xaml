@@ -54,7 +54,36 @@
             <Setter Property="CornerRadius" Value="10" />
             <Setter Property="Padding" Value="8,2,9,3" />
             <Setter Property="Margin" Value="0,0,0,3" />
-            <Setter Property="HorizontalAlignment" Value="Left" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+        </Style>
+        <!-- A full-width button with a thin light bar along its bottom edge: green while the thing is on, dark while off
+             (Preview, Screensaver; the same in W10MDashcam / W10MWebCam). The code sets the bar and the state text. -->
+        <Style x:Key="BarButton" TargetType="Button">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Background" Value="#0A160D" />
+            <Setter Property="BorderBrush" Value="#1F3A26" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="10,6,10,5" />
+            <Setter Property="Margin" Value="0,0,0,4" />
+        </Style>
+        <Style x:Key="BarName" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Foreground" Value="#D8F5DC" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style x:Key="BarState" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontFamily" Value="Consolas" />
+            <Setter Property="Foreground" Value="#7FAE86" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="8,0,0,0" />
+        </Style>
+        <Style x:Key="BarLight" TargetType="Border">
+            <Setter Property="Height" Value="3" />
+            <Setter Property="CornerRadius" Value="2" />
+            <Setter Property="Background" Value="#16301E" />
+            <Setter Property="Margin" Value="0,5,0,0" />
         </Style>
         <Style x:Key="PillDot" TargetType="Ellipse">
             <Setter Property="Width" Value="7" />
@@ -112,16 +141,41 @@
                 <!-- MAIN: what is needed day to day. Everything else folds away below. -->
                 <Button x:Name="StartButton" Content="Start RTSP stream" HorizontalAlignment="Stretch"
                         Margin="0,0,0,6" Click="StartButton_Click" IsEnabled="False" />
-                <!-- Service strip: what streams where, at a glance. Green dot = streaming; tap opens Network and login. -->
+                <!-- Service strip: the four ways in, full width. Green dot = reachable, grey = not; the note on the right says why
+                     (viewers, stopped, no USB). Tap opens Network and login. USB: the phone cannot see the cable as a link (IP over
+                     USB arrives as loopback), so USB is certain only once a PC has connected; see UpdateServicePills. -->
                 <StackPanel x:Name="ServiceStrip" Margin="0,0,0,6">
                     <Border x:Name="SvcWifi" Style="{StaticResource ServicePill}" Tapped="ServicePill_Tapped">
-                        <StackPanel Orientation="Horizontal"><Ellipse x:Name="SvcWifiDot" Style="{StaticResource PillDot}" /><TextBlock x:Name="SvcWifiText" Style="{StaticResource PillText}" Text="RTSP Wi-Fi" /></StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                            <Ellipse x:Name="SvcWifiDot" Style="{StaticResource PillDot}" />
+                            <TextBlock x:Name="SvcWifiText" Grid.Column="1" Style="{StaticResource PillText}" Text="RTSP  Wi-Fi" TextTrimming="CharacterEllipsis" />
+                            <TextBlock x:Name="SvcWifiNote" Grid.Column="2" Style="{StaticResource PillText}" Foreground="#7F9A86" Margin="6,0,0,0" Text="" />
+                        </Grid>
                     </Border>
                     <Border x:Name="SvcUsb" Style="{StaticResource ServicePill}" Tapped="ServicePill_Tapped">
-                        <StackPanel Orientation="Horizontal"><Ellipse x:Name="SvcUsbDot" Style="{StaticResource PillDot}" /><TextBlock x:Name="SvcUsbText" Style="{StaticResource PillText}" Text="RTSP USB" /></StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                            <Ellipse x:Name="SvcUsbDot" Style="{StaticResource PillDot}" />
+                            <TextBlock x:Name="SvcUsbText" Grid.Column="1" Style="{StaticResource PillText}" Text="RTSP  USB" TextTrimming="CharacterEllipsis" />
+                            <TextBlock x:Name="SvcUsbNote" Grid.Column="2" Style="{StaticResource PillText}" Foreground="#7F9A86" Margin="6,0,0,0" Text="" />
+                        </Grid>
                     </Border>
                     <Border x:Name="SvcWeb" Style="{StaticResource ServicePill}" Tapped="ServicePill_Tapped">
-                        <StackPanel Orientation="Horizontal"><Ellipse x:Name="SvcWebDot" Style="{StaticResource PillDot}" /><TextBlock x:Name="SvcWebText" Style="{StaticResource PillText}" Text="Web page" /></StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                            <Ellipse x:Name="SvcWebDot" Style="{StaticResource PillDot}" />
+                            <TextBlock x:Name="SvcWebText" Grid.Column="1" Style="{StaticResource PillText}" Text="Web UI  Wi-Fi" TextTrimming="CharacterEllipsis" />
+                            <TextBlock x:Name="SvcWebNote" Grid.Column="2" Style="{StaticResource PillText}" Foreground="#7F9A86" Margin="6,0,0,0" Text="" />
+                        </Grid>
+                    </Border>
+                    <Border x:Name="SvcWebUsb" Style="{StaticResource ServicePill}" Tapped="ServicePill_Tapped">
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                            <Ellipse x:Name="SvcWebUsbDot" Style="{StaticResource PillDot}" />
+                            <TextBlock x:Name="SvcWebUsbText" Grid.Column="1" Style="{StaticResource PillText}" Text="Web UI  USB" TextTrimming="CharacterEllipsis" />
+                            <TextBlock x:Name="SvcWebUsbNote" Grid.Column="2" Style="{StaticResource PillText}" Foreground="#7F9A86" Margin="6,0,0,0" Text="" />
+                        </Grid>
                     </Border>
                 </StackPanel>
                 <!-- Status card: state dot and label, resolution and viewer pills, then the big numbers. -->
@@ -251,15 +305,31 @@
                 <!-- Safe mode (the MP4 engine after a crash or two stalls): the way back, as on the web page. -->
                 <Button x:Name="NormalModeButton" Content="Return to normal mode (low-latency engine)" HorizontalAlignment="Stretch" Visibility="Collapsed"
                         Margin="0,2,0,4" Click="NormalModeButton_Click" Background="#3A1010" Foreground="#FFD0D0" BorderBrush="#A03030" />
-                <!-- The picture and the screen saver, right under the status: Show camera picture (60 s) turns into Turn preview off
-                     while a picture shows; the black-screen switch is the screen saver (MainPage.Display.cs). -->
-                <Button x:Name="ShowPictureButton" Content="Preview (60 s)" HorizontalAlignment="Stretch"
-                        Margin="0,2,0,2" Click="ShowPictureButton_Click" />
-                <Grid Margin="0,0,0,4">
-                    <ToggleSwitch x:Name="PowerSaveToggle" Header="Screensaver" IsOn="True" Toggled="PowerSaveToggle_Toggled" />
-                    <Button Style="{StaticResource InfoButton}"><Button.Flyout><Flyout><TextBlock Style="{StaticResource InfoText}"
-                        Text="Black screen, lowest brightness, no preview while streaming. Tap the black screen for 15 s of status. On, it switches Preview on the phone off; Preview on switches it off." /></Flyout></Button.Flyout></Button>
-                </Grid>
+                <!-- Preview and Screensaver, right under the status: light-bar buttons (MainPage.Display.cs). Preview shows the
+                     live state of the picture, whatever started it; a press ends it, or shows it (60 s while the screensaver
+                     runs, otherwise until pressed again). The two ToggleSwitches below hold the state and are never shown. -->
+                <Button x:Name="PreviewButton" Style="{StaticResource BarButton}" Click="PreviewButton_Click">
+                    <Grid>
+                        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                        <TextBlock Text="Preview" Style="{StaticResource BarName}" />
+                        <TextBlock x:Name="PreviewStateText" Grid.Column="1" Text="OFF" Style="{StaticResource BarState}" />
+                        <Border x:Name="PreviewBar" Grid.Row="1" Grid.ColumnSpan="2" Style="{StaticResource BarLight}" />
+                    </Grid>
+                </Button>
+                <Button x:Name="ScreensaverButton" Style="{StaticResource BarButton}" Click="ScreensaverButton_Click">
+                    <Grid>
+                        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                        <TextBlock Text="Screensaver" Style="{StaticResource BarName}" />
+                        <TextBlock x:Name="ScreensaverStateText" Grid.Column="1" Text="ON" Style="{StaticResource BarState}" />
+                        <Border x:Name="ScreensaverBar" Grid.Row="1" Grid.ColumnSpan="2" Style="{StaticResource BarLight}" />
+                    </Grid>
+                </Button>
+                <StackPanel Visibility="Collapsed">
+                    <ToggleSwitch x:Name="PreviewToggle" Toggled="PreviewToggle_Toggled" />
+                    <ToggleSwitch x:Name="PowerSaveToggle" IsOn="True" Toggled="PowerSaveToggle_Toggled" />
+                </StackPanel>
 
                 <Button Style="{StaticResource FoldButton}" Tag="VideoPanel|VIDEO" Content="VIDEO  &#x25B8;" Click="Fold_Click" />
                 <StackPanel x:Name="VideoPanel" Visibility="Collapsed">
@@ -277,11 +347,6 @@
 
                 <Button Style="{StaticResource FoldButton}" Tag="CameraPanel|CAMERA" Content="CAMERA  &#x25B8;" Click="Fold_Click" />
                 <StackPanel x:Name="CameraPanel" Visibility="Collapsed">
-                    <Grid>
-                        <ToggleSwitch x:Name="PreviewToggle" Header="Preview on the phone" Toggled="PreviewToggle_Toggled" />
-                        <Button Style="{StaticResource InfoButton}"><Button.Flyout><Flyout><TextBlock Style="{StaticResource InfoText}"
-                            Text="The camera picture on this screen, except behind the black screen. Changing it while streaming restarts the stream once." /></Flyout></Button.Flyout></Button>
-                    </Grid>
                     <ToggleSwitch x:Name="AutoCameraCheck" Header="Automatic focus, exposure and white balance" IsOn="True" Toggled="AutoCameraCheck_Changed" />
                     <Button x:Name="FocusOnceButton" Content="Focus once and lock" Click="FocusOnceButton_Click" HorizontalAlignment="Stretch" Margin="0,2,0,4" />
                     <TextBlock x:Name="TuningStateText" Text="" FontSize="11" Foreground="#B9CFBD" TextWrapping="Wrap" Margin="0,0,0,4" />
@@ -306,6 +371,11 @@
 
                 <Button Style="{StaticResource FoldButton}" Tag="PowerPanel|POWER" Content="POWER  &#x25B8;" Click="Fold_Click" />
                 <StackPanel x:Name="PowerPanel" Visibility="Collapsed">
+                    <Grid>
+                        <ToggleSwitch x:Name="HeatProtectToggle" Header="Heat protection" IsOn="True" Toggled="HeatProtectToggle_Toggled" />
+                        <Button Style="{StaticResource InfoButton}"><Button.Flyout><Flyout><TextBlock Style="{StaticResource InfoText}"
+                            Text="When charging pauses on a good charger the phone is hot: 1080p / 6 Mbps, screensaver on, flashlight locked, until it charges normally again. Off: nothing is changed, and on a weak charger the battery drains and the phone dies." /></Flyout></Button.Flyout></Button>
+                    </Grid>
                     <TextBlock x:Name="PowerAlert" Text="Heat protection: power saving forced on" Foreground="#FF5555" FontWeight="Bold" FontSize="12" TextWrapping="Wrap" Visibility="Collapsed" Margin="0,2,0,2" />
                     <Grid>
                         <ToggleSwitch x:Name="KeepPreviewToggle" Header="Keep the preview running behind the black screen" Toggled="KeepPreviewToggle_Toggled" />

@@ -54,11 +54,15 @@ namespace W10MSecurityCam.Streaming
         private static byte[] SwitchedOff(string what) =>
             Reply(403, "Forbidden", "text/plain", "The " + what + " is switched off. Switch it on on the phone (Network and login)" + (what == "web page" ? "" : " or on the settings page") + ".\n");
 
+        /// <summary>When a request last came in over the USB cable (127.0.0.1): the phone's only sign that USB is connected.</summary>
+        public DateTime LastUsbRequest = DateTime.MinValue;
+
         public async Task<byte[]> HandleAsync(HttpRequest r)
         {
             try
             {
                 string path = r.Path.TrimEnd('/');
+                if (r.FromUsb) LastUsbRequest = DateTime.Now;
                 if (!WebEnabled) return SwitchedOff("web page");
                 // The pages, the log and the JSON are view only without a login (as in W10MWebCam). Changes, the snapshot
                 // and /login need the stream login, over USB too: any program or web page on the PC the phone is plugged
@@ -151,7 +155,7 @@ namespace W10MSecurityCam.Streaming
                 if (refused != null) return Reply(403, "Forbidden", "text/plain", refused);
                 var all = ParseForm(r.Body); // changes only in the body, never in the URL
                 var only = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                foreach (var k in new[] { "camera", "focus", "exposure", "wb", "format", "bitrate", "highbw", "powersave", "stream", "engine", "user", "password", "savepower", "saveois", "savefocus", "probe", "torch", "log", "stats", "preview", "keeppreview" })
+                foreach (var k in new[] { "camera", "focus", "exposure", "wb", "format", "bitrate", "highbw", "powersave", "heatprotect", "stream", "engine", "user", "password", "savepower", "saveois", "savefocus", "probe", "torch", "log", "stats", "preview", "keeppreview" })
                     if (all.TryGetValue(k, out var v)) only[k] = v;
                 string bad = CheckLoginFields(only) ?? CheckCurrentPassword(only, all);
                 if (bad != null) result = bad;

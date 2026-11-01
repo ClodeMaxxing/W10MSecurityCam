@@ -102,19 +102,42 @@ namespace W10MSecurityCam
 
         private static string ViewerCountText(int n) => n > 0 ? " · " + n + (n == 1 ? " viewer" : " viewers") : "";
 
-        /// <summary>Once a second (UpdateStatusCard): what streams where. Green while streaming, grey when stopped.</summary>
+        /// <summary>
+        /// Once a second (UpdateStatusCard): the four ways in. Green = reachable now, grey = not, with the reason on the right.
+        /// USB is the honest case: the phone cannot see the cable as a network link (IP over USB arrives as loopback), so a
+        /// USB row is green once a PC has talked to it (an RTSP viewer, or a web request in the last 30 s), amber "cable?"
+        /// while the phone is on external power but nothing has connected, and grey "no USB" on battery (no cable at all).
+        /// </summary>
         private void UpdateServicePills(bool streaming)
         {
-            var on = streaming ? GreenFill : Brush(0x55, 0x55, 0x55);
-            var text = streaming ? Brush(0x9C, 0xF0, 0xB0) : Brush(0x7F, 0x9A, 0x86);
+            var grey = Brush(0x55, 0x55, 0x55); var amber = AmberFill;
+            var litText = Brush(0x9C, 0xF0, 0xB0); var dimText = Brush(0x7F, 0x9A, 0x86);
             string ip = _ips.Count > 0 ? _ips[0] : null;
-            SvcWifiDot.Fill = SvcUsbDot.Fill = on;
-            SvcWifiText.Foreground = SvcUsbText.Foreground = text;
-            SvcWifiText.Text = (ip != null ? "RTSP Wi-Fi " + ip + ":" + RtspPort : "RTSP Wi-Fi (not connected)") + ViewerCountText(_server.ViewerCount(false));
-            SvcUsbText.Text = "RTSP USB 127.0.0.1:" + UsbPort + ViewerCountText(_server.ViewerCount(true));
-            SvcWebDot.Fill = _webOn ? GreenFill : Brush(0x55, 0x55, 0x55);
-            SvcWebText.Foreground = _webOn ? Brush(0x9C, 0xF0, 0xB0) : Brush(0x7F, 0x9A, 0x86);
-            SvcWebText.Text = "Web page " + (_webOn ? "ON" : "OFF");
+            int usbViewers = _server.ViewerCount(true), wifiViewers = _server.ViewerCount(false);
+            bool usbSeen = usbViewers > 0 || (DateTime.Now - _api.LastUsbRequest).TotalSeconds < 30;
+            bool cable = OnExternalPower(_battery);
+            string usbNote = usbSeen ? "" : cable ? "cable?" : "no USB";
+            var usbDot = usbSeen ? GreenFill : cable ? amber : grey;
+
+            SvcWifiDot.Fill = streaming && ip != null ? GreenFill : grey;
+            SvcWifiText.Foreground = streaming && ip != null ? litText : dimText;
+            SvcWifiText.Text = "RTSP  Wi-Fi " + (ip != null ? "rtsp://" + ip + ":" + RtspPort + "/live" : "");
+            SvcWifiNote.Text = ip == null ? "no Wi-Fi" : !streaming ? "stopped" : ViewerCountText(wifiViewers).TrimStart(' ', '·', ' ');
+
+            SvcUsbDot.Fill = streaming ? usbDot : grey;
+            SvcUsbText.Foreground = streaming && usbSeen ? litText : dimText;
+            SvcUsbText.Text = "RTSP  USB rtsp://127.0.0.1:" + UsbPort + "/live";
+            SvcUsbNote.Text = !streaming ? "stopped" : usbViewers > 0 ? ViewerCountText(usbViewers).TrimStart(' ', '·', ' ') : usbNote;
+
+            SvcWebDot.Fill = _webOn && ip != null ? GreenFill : grey;
+            SvcWebText.Foreground = _webOn && ip != null ? litText : dimText;
+            SvcWebText.Text = "Web UI  Wi-Fi " + (ip != null ? "http://" + ip + ":" + LogPort : "");
+            SvcWebNote.Text = !_webOn ? "off" : ip == null ? "no Wi-Fi" : "";
+
+            SvcWebUsbDot.Fill = _webOn ? usbDot : grey;
+            SvcWebUsbText.Foreground = _webOn && usbSeen ? litText : dimText;
+            SvcWebUsbText.Text = "Web UI  USB http://127.0.0.1:" + UsbPort;
+            SvcWebUsbNote.Text = !_webOn ? "off" : usbNote;
         }
 
         /// <summary>A tap on a pill opens the Network and login section, where the addresses and switches are.</summary>

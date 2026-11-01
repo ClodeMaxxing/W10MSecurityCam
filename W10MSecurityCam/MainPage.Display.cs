@@ -131,8 +131,7 @@ namespace W10MSecurityCam
         {
             bool previewing = _camera != null && _camera.Previewing;
             PreviewOffText.Visibility = previewing ? Visibility.Collapsed : Visibility.Visible;
-            // the one button under the status: it ends whatever shows the picture, or shows it for 60 s
-            ShowPictureButton.Content = previewing || _phoneAdjusting ? "Turn preview off" : "Preview (" + AdjustSeconds + " s)";
+            UpdateDisplayButtons(previewing);
             if (previewing) return;
             PreviewOffText.Text = _camera == null ? "Camera starting..."
                 : StreamingNow && _phoneAdjusting ? "Starting the camera picture (the stream restarts for a moment)..."
@@ -140,7 +139,29 @@ namespace W10MSecurityCam
                 : "Preview off\nTap to show the picture for " + AdjustSeconds + " s";
         }
 
+        /// <summary>
+        /// The two light-bar buttons under the status. Preview lights while a picture shows or is on its way, whatever
+        /// started it (a tap, a slider, the switch); the state text adds the seconds left of a 60 s picture. Screensaver
+        /// lights while the switch is on, and says so when heat protection holds it.
+        /// </summary>
+        private void UpdateDisplayButtons(bool previewing)
+        {
+            if (PreviewBar == null || ScreensaverBar == null) return; // the XAML still loads
+            var lit = Brush(0x39, 0xFF, 0x14); var dark = Brush(0x16, 0x30, 0x1E);
+            var litText = Brush(0x39, 0xFF, 0x14); var dimText = Brush(0x7F, 0xAE, 0x86);
+            bool on = previewing || _phoneAdjusting || PreviewToggle.IsOn;
+            PreviewBar.Background = on ? lit : dark;
+            PreviewStateText.Foreground = on ? litText : dimText;
+            int left = _phoneAdjusting ? Math.Max(0, (int)Math.Ceiling((_adjustEnds - DateTime.Now).TotalSeconds)) : 0;
+            PreviewStateText.Text = !on ? "OFF" : _phoneAdjusting && left > 0 ? "ON · " + left + " s" : previewing ? "ON" : "STARTING";
+            bool ss = PowerSaveToggle.IsOn;
+            ScreensaverBar.Background = ss ? lit : dark;
+            ScreensaverStateText.Foreground = ss ? litText : dimText;
+            ScreensaverStateText.Text = !ss ? "OFF" : _protect ? "ON · HEAT PROTECTION" : StreamingNow ? "ON" : "ON · WHILE STREAMING";
+        }
+
         // ---- adjusting: the picture until 60 s after the last touch
+        private DateTime _adjustEnds = DateTime.MinValue; // for the seconds left on the Preview button
 
         /// <summary>A camera control was touched on the phone (or Preview (60 s) / the preview area was tapped).</summary>
         private void TouchPhoneAdjust() { var _ = TouchPhoneAdjustAsync(false); }
@@ -149,6 +170,7 @@ namespace W10MSecurityCam
         {
             if (_adjustTimer == null) LoadDisplaySettings();
             _adjustTimer.Stop(); _adjustTimer.Start();
+            _adjustEnds = DateTime.Now.AddSeconds(AdjustSeconds);
             if (_protect) return; // heat protection keeps the screen black
             bool was = _phoneAdjusting;
             _phoneAdjusting = true;
@@ -158,7 +180,7 @@ namespace W10MSecurityCam
         }
 
         /// <summary>Keeps the timer going while the person is still adjusting (does not start adjusting by itself).</summary>
-        private void KeepAdjusting() { if (_phoneAdjusting) { _adjustTimer.Stop(); _adjustTimer.Start(); } }
+        private void KeepAdjusting() { if (_phoneAdjusting) { _adjustTimer.Stop(); _adjustTimer.Start(); _adjustEnds = DateTime.Now.AddSeconds(AdjustSeconds); } }
 
         private void EndPhoneAdjust() { _phoneAdjusting = false; _adjustTimer?.Stop(); }
 
@@ -172,12 +194,24 @@ namespace W10MSecurityCam
             await ApplyDisplayAsync();
         }
 
-        /// <summary>Preview (60 s) (60 s), or - while a picture shows for any reason - Turn preview off: ends the 60 s and switches both preview switches off.</summary>
-        private async void ShowPictureButton_Click(object sender, RoutedEventArgs e)
+        /// <summary>
+        /// The Preview button. Lit (a picture shows for any reason): ends it - the 60 s, the switch and Keep the preview.
+        /// Dark: while streaming behind the screensaver, the picture for 60 s (the screensaver stays on and comes back);
+        /// otherwise the switch goes on and the picture stays until the button is pressed again.
+        /// </summary>
+        private async void PreviewButton_Click(object sender, RoutedEventArgs e)
         {
-            bool showing = (_camera != null && _camera.Previewing) || _phoneAdjusting;
-            if (!showing) { await TouchPhoneAdjustAsync(true); return; }
-            await TurnPreviewOffAsync();
+            bool showing = (_camera != null && _camera.Previewing) || _phoneAdjusting || PreviewToggle.IsOn;
+            if (showing) { await TurnPreviewOffAsync(); return; }
+            if (StreamingNow && PowerSaveToggle.IsOn) { await TouchPhoneAdjustAsync(true); return; }
+            PreviewToggle.IsOn = true; // its handler saves, switches the screensaver off and applies
+        }
+
+        /// <summary>The Screensaver button: flips the switch (its handler does the rest). Locked while heat protection holds it.</summary>
+        private void ScreensaverButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_protect) { Log("Screensaver: held on by heat protection"); return; }
+            PowerSaveToggle.IsOn = !PowerSaveToggle.IsOn;
         }
 
         /// <summary>No picture at all: the 60 s ends and Preview on the phone and Keep the preview running go off (one restart while streaming).</summary>
@@ -249,7 +283,7 @@ namespace W10MSecurityCam
         {
             if (_loadingDisplayUi) return;
             _settings.Values["Preview"] = PreviewToggle.IsOn;
-            Log("Preview on the phone " + (PreviewToggle.IsOn ? "on" : "off"));
+            Log("Preview " + (PreviewToggle.IsOn ? "on" : "off"));
             if (!PreviewToggle.IsOn) { await TurnPreviewOffAsync(); return; } // off means no picture at all, now
             // on: the picture must show, so the screensaver goes off (the two switches are exclusive; the person's choice is saved)
             if (PowerSaveToggle != null && PowerSaveToggle.IsOn && !_protect) { _loadingDisplayUi = true; try { PowerSaveToggle.IsOn = false; } finally { _loadingDisplayUi = false; } _settings.Values["PowerSave"] = false; }
