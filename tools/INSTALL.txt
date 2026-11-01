@@ -1,0 +1,32 @@
+W10MSecurityCam - installing on a Windows 10 Mobile phone
+=========================================================
+
+The zip holds:
+  W10MSecurityCam_<version>_ARM.appx   the app
+  Dependencies\*.appx                  three Microsoft runtime packages the app needs (.NET Native framework and runtime, VC libs)
+  W10MSecurityCam.cer                  the self-signed test certificate the app is signed with
+
+1. On the phone: Settings > Update & security > For developers > Developer mode.
+   Also turn on "Device discovery" and "Device Portal" there.
+
+2a. With the phone's Device Portal (easiest):
+    - On the phone, Device Portal shows an address such as http://192.168.0.121 (Wi-Fi) or http://127.0.0.1:10080 (USB).
+      Open it in a browser on the PC and pair with the code shown on the phone.
+    - Apps > App manager > Install app: choose the .appx as the app package, add the three files in Dependencies
+      as dependencies (and the .cer as the certificate if the page asks for one), then Go.
+
+2b. Or with WinAppDeployCmd (in the Windows 10 SDK, Windows Kits\10\bin\<version>\x86\):
+      WinAppDeployCmd install -file W10MSecurityCam_<version>_ARM.appx -ip 127.0.0.1 ^
+        -dependency Dependencies\Microsoft.NET.Native.Framework.1.7.appx Dependencies\Microsoft.NET.Native.Runtime.1.7.appx Dependencies\Microsoft.VCLibs.ARM.14.00.appx
+    Use the phone's Wi-Fi address instead of 127.0.0.1 if it isn't plugged in. Add -pin CODE the first time
+    (Settings > Update & security > For developers > Pair).
+
+3. Open W10MSecurityCam on the phone. The stream starts by itself; the phone shows its RTSP address
+   (rtsp://PHONE-IP:8554/live, login admin / admin until you change it) for VLC or an NVR, and the settings page is at
+   http://PHONE-IP:5001/camera on the Wi-Fi (or http://127.0.0.1:8020/camera over the USB cable). The page can be read
+   without the login; changes need it (Log in on the page), and the first thing to change is the login itself, on the
+   phone under Network and login.
+   See README.md on the project page for the NVR settings and troubleshooting:
+   https://github.com/ClodeMaxxing/W10MSecurityCam
+
+Updating: install the newer package the same way; settings are kept.

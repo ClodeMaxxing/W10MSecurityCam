@@ -38,7 +38,7 @@ namespace W10MSecurityCam.Streaming
         public string State = "";
 
         // ---- camera power saving (less processing and heat; each part can be switched off)
-        public bool SaveOis = true, SaveFocus = true;
+        public bool SaveOis = true, SaveFocus = false; // the automatic focus hold is off by default (Focus once and lock does it by hand)
         public bool SaveAll
         {
             get { return SaveOis && SaveFocus; }

@@ -20,10 +20,16 @@ camera at a time.
 |---|---|
 | Stream (Wi-Fi) | `rtsp://PHONE-IP:8554/live` (the app shows the IP) |
 | Stream (USB) | `rtsp://127.0.0.1:8020/live` |
-| Settings page | `http://PHONE-IP:5001/camera` (over USB: `http://127.0.0.1:8020/camera`) |
-| Health | `http://PHONE-IP:5001/status` (JSON: fps, bitrate, viewers, battery, memory, Wi-Fi signal, restarts) |
-| Log | `http://PHONE-IP:5001` |
-| Snapshot | `http://PHONE-IP:5001/snapshot.jpg` (only when turned on, see below) |
+| Settings page | `http://PHONE-IP:5001/camera` or just `http://PHONE-IP:5001` (over USB: `http://127.0.0.1:8020/camera`) |
+| Health | `http://PHONE-IP:5001/status` (JSON: fps, bitrate, viewers, battery and charger, heat, memory, Wi-Fi signal, restarts) |
+| Log | `http://PHONE-IP:5001/log` (with the *Log page* switch on) |
+| Stats | `http://PHONE-IP:5001/stats`: graphs of the last 12 hours, sampled every 30 s (with the *Stats page* switch on) |
+| Snapshot | `http://PHONE-IP:5001/snapshot.jpg` (only when turned on, see below; needs the login) |
+
+The pages, `/status` and the log can be read on the home network without a login (view only); changes, the snapshot
+and the stream need it (see Login). Under *Network and login* on the phone, the **web page** is on by default (it is
+the way to set the camera up without a cable), the **log page** and the **stats page** are off until switched on there
+or on the settings page; a page that is off answers 403. The stream is never affected by these switches.
 
 Video is H.264 (track 1); with microphone audio on, there is also an AAC track (48 kHz mono,
 about 96 kbps). Both are sent as RTP over the RTSP TCP connection. Choose TCP in the NVR if it
@@ -39,8 +45,9 @@ within 10 seconds.
 
 ## Defaults
 
-1080p at 24 fps (the lowest rate of 15 fps or more the camera offers), 4 Mbps, keyframe every 2 s. A fresh install
-starts with these; you can change them in the app.
+The highest format the camera offers (3840 x 2160 at 30 fps on the Lumia 950) at 24 Mbps, keyframe every 2 s. The
+bitrate follows the resolution across the 1080p line: 24 Mbps above it, 4 Mbps at 1080p and below. A fresh install
+starts with these (and an older install takes them once at the 1.4 update); you can change them in the app.
 
 **4K:** 4K30 works over the home Wi-Fi: 45-second tests at 8, 12, 16 and 24 Mbps all ran at a full 30 fps with no
 lost packets (about 7, 11, 15 and 22 Mbps on the wire). How much bitrate 4K needs depends on the scene; 12-16 Mbps
@@ -51,47 +58,82 @@ above 1 s. This costs a little bandwidth, nothing else.
 
 ## Settings page and camera controls
 
-Open `http://PHONE-IP:5001/camera` in any browser. The page and the phone screen share one look (black with green
-accents, version number at the top right) and the same sections. Click a header to fold its section; the web page
-remembers the choice in that browser. Explanations sit behind small (i) icons: hover or tap them.
+Open `http://PHONE-IP:5001/camera` in any browser. The page is a mirror of the phone screen (black with green accents,
+the version at the top right): the same card, bar buttons and drawers in the same order, so what you learn on one you
+know on the other. The only differences: the page has a *Log in* button, and its own *Web page* switch is locked (the
+page cannot cut itself off). Tap a drawer head to open or close it; the web page remembers the choice in that browser.
+Explanations sit behind small (i) icons.
 
-- **Status:** a card with the state (Streaming / Stopped / Heat protection, with a pulsing dot), resolution, uptime and
-  viewer count, large fps and Mbps figures, and tiles with graphs: battery bar, Wi-Fi bars, temperature badge (Healthy /
-  Unstable), phone and app CPU, app memory, engine badge (Fast / Safe mode), encoder latency, and power (watts into or
-  out of the battery on a 0-15 W bar). A tile turns amber or red when it needs attention. An amber notice appears while
-  the default login is in use, a red one for heat.
-- **Video:** resolution/fps, bitrate and a **High BW** toggle on one line, Start/Stop stream, and **Stream addresses**,
-  a pop-up with the Wi-Fi and USB stream addresses, this page over USB and the live log.
-  Changing resolution or bitrate starts the stream, or restarts it if it is running.
-- **Camera:** Automatic focus, exposure and white balance (one master box, plus a box and slider for each), **Focus once
-  and lock**, and the **flashlight** (only while streaming; it switches itself off after 30 seconds because the LED heats
-  the phone fast, and it cannot be dimmed on this phone). Leave everything on Auto for a camera that follows the daylight.
-- **Power:** one button that blacks out the phone screen, and the **Power-saving camera features** box (stabilization
-  off for a fixed mount, hold focus once it has settled; untick the box to choose each). Changing stabilization restarts
-  the stream once.
+From the top:
 
-**The phone screen while streaming** is black with the preview off, whatever you change on the web page. The main
-screen holds Start/Stop, the status card, **Show camera picture (60 s)**, **Black out the screen now** and any warning;
-Video, Camera, Power, Network and login, and Details and log fold away. Tapping the black screen shows the status for
-15 seconds with no restart. **Show camera picture** (or touching a camera control) shows the picture until 60 seconds
-after your last touch; **Black out the screen now** ends it straight away. The preview can only start or stop while the
-stream is stopped (changing it mid-stream stalled the 4K pipeline), so each of these restarts the stream once, a gap of
-a second or two for the NVR. Keeping the preview running behind the black screen was measured and rejected: it doubled
-the app's CPU use (12% to 24%) and raised the battery draw. The start/stop chirp is Windows' own recording sound; it
-follows the phone's Ringer + notifications volume.
+- **The status card**, with the app name as its top band. Its header row is the **stream button**: a tall bar with a
+  green edge light while streaming, a red light that pulses, **STREAMING** / **START STREAM** (or **HEAT PROTECTION**
+  in red) and the format pill (`4K30`; `SAFE` in safe mode). Under it the **FPS**, **MBPS** and **VIEWERS** tiles, then
+  the phone tiles: battery bar, Wi-Fi bars, temperature badge (Healthy / Paused / Hot / Protect), phone and app CPU,
+  app memory, engine badge (Fast / Safe mode), encoder latency and power (watts into or out of the battery on a 0-15 W
+  bar). A tile turns amber or red when it needs attention: the battery bar goes red when the battery is draining
+  although the phone says "Charging" (judged every second from the power reading: a PC USB port often can't keep up
+  with 4K). Amber notices appear while the default login is in use and when the charger is insufficient (with the
+  watts), a red one for heat; **Return to normal mode** appears in safe mode.
+- **Two service groups**, **RTSP** and **WEB UI**, each with a **Wi-Fi** and a **USB** row and the full address. The dot
+  is green when that way in works: the RTSP rows while streaming (with the viewers), the Wi-Fi rows while the phone
+  has an address, the USB rows once a PC has connected over the cable (amber *cable?* while the phone is on external
+  power but nothing has connected yet, grey *no USB*). A tap opens *Network and login*.
+- **Three bar buttons** with an edge light that is green while on: **Preview**, **Screensaver** and **Flashlight**.
+  - **Preview** shows the camera picture. While streaming with the screensaver on it shows it for 60 s (*ON · 20 s*
+    counts down; the stream restarts once, see below) and the screensaver comes back; otherwise the picture stays until
+    the button is pressed again. Lit, the button ends any picture. Touching a camera control or the dark preview area
+    does the same as a press.
+  - **Screensaver** (on by default) blacks the screen out while streaming: zero brightness, black OLED pixels, the
+    preview off. Tap the black screen to read the status for 15 seconds. Preview and Screensaver exclude each other.
+  - **Flashlight** (the camera LED) works whenever the camera is open, streaming or not, and switches itself off after
+    30 seconds because the LED heats the phone fast and cannot be dimmed on this phone. With the stream stopped the
+    preview is started quietly to carry the LED and ended with it. Locked by heat protection.
+- **Drawers:**
+  - **Video:** resolution/fps, bitrate and keyframe interval as picker tiles, **High bandwidth (over 24 Mbps)** and
+    **Microphone audio (AAC)** rows. Changing resolution or bitrate starts the stream, or restarts it if it is running.
+    The default is the highest format the camera offers (4K30 on the Lumia 950) at 24 Mbps; the bitrate follows the
+    resolution across the 1080p line (4 Mbps at 1080p and below).
+  - **Camera:** **Automatic focus, exposure and white balance** (one row), **Image stabilization** (on by default; off
+    saves processing and heat on a fixed mount and restarts the stream once), **Focus once and lock** (an on/off row:
+    off focuses once and locks there, *ON · LOCKED*; pressed again it releases to continuous autofocus), and three
+    value tiles, **Focus**, **Exposure** (with the ISO) and **White balance**, each with an Auto / Manual segment, the
+    current value and a slider. Leave everything on Auto for a camera that follows the daylight.
+  - **Power:** **Heat protection** (on by default; it asks before it goes off, because a hot phone on a weak charger
+    then drains until it dies) and **Preview on always** (off by default: the preview runs even behind the screensaver,
+    so a tap shows the picture at once; it starts the preview when switched on and the Preview bar reads *ON · ALWAYS*;
+    costs CPU and heat; heat protection switches it off).
+  - **Network and login:** the stream address, the web page / log / stats switches with their addresses, *Start
+    streaming when the app opens*, RTP over UDP, snapshots and the login.
+  - **Viewer setup:** the addresses to paste, with the login, and the settings for an NVR (Blue Iris, Frigate,
+    Synology), VLC, OBS and ffplay.
+  - **Details and log:** the technical status line and the app's log.
 
-Everything on the page needs the login (see Login below), over the USB cable too: any program or web page on the PC
-the phone is plugged into can reach the USB port.
+**The phone screen while streaming** is black with the preview off (Screensaver), whatever you change on the web page.
+The same rules run in W10MDashcam and W10MWebCam (`MainPage.Display.cs`): the screen is never black with the preview
+still running unless *Preview on always* says so. The preview can only start or stop while the stream is stopped
+(changing it mid-stream stalled the 4K pipeline), so a Preview press while streaming restarts the stream once, a gap of
+a second or two for the NVR. The start/stop chirp is Windows' own recording sound; it follows the phone's Ringer +
+notifications volume.
+
+The page can be read without the login (a *View only* notice with a *Log in* button shows); changes need the login
+(see Login below), over the USB cable too: any program or web page on the PC the phone is plugged into can reach the
+USB port. The page reloads itself after an app update.
 
 **High bandwidth mode** unlocks bitrates above 24 Mbps (up to 60). It needs 5 GHz Wi-Fi or a USB-C connection; at
 60 Mbps on 2.4 GHz the stream drops frames. Auto bitrate is capped at 16 Mbps (40 Mbps in high bandwidth mode).
 
 **Temperature and heat protection:** Windows 10 Mobile gives apps no temperature reading, and the frame rate does not
 show heat (it stayed at 25 fps while Windows warned of overheating). The app uses the charging state instead: if
-charging pauses ("Idle") on a charger Windows reports as adequate, with the battery below 95%, for 20 seconds, the
-temperature reads **Unstable** and *heat protection* switches on. It forces the power-saving options on (screen blackout,
-preview off, stabilization off, held focus), lowers the video to 1080p at 6 Mbps (restored afterwards), locks the flashlight and shows a red warning on the phone and the web page.
-After 30 seconds of charging again your own settings come back; the flashlight stays off but can be used again.
+charging pauses ("Idle") on a charger Windows reports as adequate, with the battery below 95%, the temperature badge
+reads **Paused** (amber); after 20 seconds of that it reads **Hot** and *heat protection* switches on, with a chime
+and a vibration. It forces the screensaver on and the preview off, switches stabilization off, lowers the video to
+1080p at 6 Mbps (restored afterwards), locks the flashlight and shows a red warning on the phone and the web page. The
+usual cause is a charger that can't keep up (a PC USB port or a small adapter; use 2 A or more). After 30 seconds of
+charging again (and at least 3 minutes) your own settings come back, with a short chime; the flashlight stays off but
+can be used again. The **Heat protection** switch under Power (on by default) turns the intervention off; the app asks
+first, and a hot phone then gets a distinct **HOT, no protection** warning (badge, Power alert, web page, log, chime)
+and nothing else.
 Windows can still stop the app first if it overheats quickly; the app then restarts into heat protection.
 
 **Safe mode:** after a crash or two stalls the app uses the slower MP4 engine, limited to 1080p. The page says so and
@@ -102,12 +144,12 @@ login is kept). The log says "SELF-CHECK".
 
 ## Login
 
-One login protects everything on the phone, over Wi-Fi and over the USB cable alike: the RTSP stream, the settings
-page, `/status`, the log, `/config` and snapshots. A fresh install uses **admin / admin**; the phone screen and the
-settings page warn until you change it.
+One login protects the RTSP stream, every change (the settings page, `/config`) and the snapshot, over Wi-Fi and over
+the USB cable alike; reading the page, `/status`, the log and the stats needs no login (view only). A fresh install
+uses **admin / admin**; the phone screen and the settings page warn until you change it.
 
-- **Settings page:** open `http://PHONE-IP:5001/camera`, sign in, and use the **Login** section at the bottom (user name,
-  new password twice, 8-64 characters). Your browser asks you to sign in again afterwards.
+- **Settings page:** open `http://PHONE-IP:5001/camera`, press **Log in**, and use the **Login** section at the bottom
+  (current password, user name, new password twice, 8-64 characters). Your browser asks you to sign in again afterwards.
 - **On the phone:** tap the screen to wake it, open **Network and login**, enter a user name and password under "Login
   (stream and web page)" and tap **Save login**. An empty password resets the login to admin / admin (it is never
   turned off).
@@ -182,9 +224,12 @@ is shown by `/config`. `http://127.0.0.1:8020/config` shows the current values (
 `tools\Soak-Monitor.ps1` records the camera's status on the PC for as long as it runs:
 
 ```
-powershell -ExecutionPolicy Bypass -File tools\Soak-Monitor.ps1                 (phone address from tools\phone-ip.txt)
-powershell -ExecutionPolicy Bypass -File tools\Soak-Monitor.ps1 -Every 15 -User admin -Password secret
+powershell -ExecutionPolicy Bypass -File tools\Soak-Monitor.ps1                               (over the USB cable)
+powershell -ExecutionPolicy Bypass -File tools\Soak-Monitor.ps1 -Phone 192.168.0.50 -Every 15   (over Wi-Fi)
 ```
+
+It reads `/status` without a login (the same script serves W10MSecurityCam, W10MDashcam and W10MWebCam); the phone log
+is collected only while the *Log page* switch is on.
 
 Every sample (default 30 s) goes to `tools\soak\soak-DATE.csv`: streaming, fps, Mbps, viewers, format, engine,
 latency, battery %, charging, watts, heat, heat protection, phone and app CPU, memory, Wi-Fi, uptime, screen and

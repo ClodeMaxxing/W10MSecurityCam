@@ -1,268 +1,359 @@
 namespace W10MSecurityCam.Streaming
 {
-    /// <summary>The small camera-settings web page (http://PHONE-IP:5001/camera). Plain HTML + a little script.</summary>
+    /// <summary>
+    /// The settings web page (http://PHONE-IP:5001/camera): the phone screen, mirrored. The same status card with the
+    /// stream row as the button, the same service groups, the Preview / Screensaver / Flashlight buttons and the same
+    /// drawers. The two differences: a Log in button (the page is view only without the login) and the web page switch,
+    /// which only the phone can turn off. Plain HTML + a little script; the state comes from /camera/state every 3 s.
+    /// </summary>
     internal static class CameraPage
     {
         public const string Html = @"<!doctype html>
 <html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>
 <title>W10MSecurityCam</title>
 <style>
-body{font-family:'Segoe UI',system-ui,sans-serif;background:#000;color:#d6e8d9;margin:0;padding:16px;max-width:480px}
-h1{font-size:19px;margin:0 0 4px;display:flex;justify-content:space-between;align-items:baseline;color:#e4f5e7;letter-spacing:.3px}
-#ver{font-size:12px;font-weight:bold;color:#39ff14;text-shadow:0 0 6px rgba(57,255,20,.45)}
-.sub{color:#7f9a86;font-size:12px;margin-bottom:12px;word-break:break-word}
-.row{margin:14px 0}.head{display:flex;justify-content:space-between;align-items:center;font-size:14px}
-input[type=text],input[type=password],input:not([type]){background:#0d140f;color:#d6e8d9;border:1px solid #1f3a26;border-radius:4px;padding:6px;font-size:14px;width:46%;margin:2px 0}
-input[type=range]{width:100%;accent-color:#3fbf5f}input[type=range]:disabled{opacity:.35}input[type=checkbox]{accent-color:#3fbf5f}
-select{background:#0d140f;color:#d6e8d9;border:1px solid #1f3a26;border-radius:4px;padding:6px;font-size:14px;max-width:48%}
-button{background:#123320;color:#cfffd8;border:1px solid #2e7d46;border-radius:6px;padding:8px 12px;font-size:14px;margin-top:6px;cursor:pointer}
-button:hover:not(:disabled){background:#18452b;box-shadow:0 0 8px rgba(63,191,95,.35)}
-button:disabled{opacity:.35}
-label{font-size:13px;color:#b9cfbd}#msg{color:#e9a;font-size:12px;min-height:16px}
-h2{font-size:13px;color:#9cf0b0;background:#0b1a10;text-transform:uppercase;letter-spacing:1px;border:1px solid #1f3a26;border-left:3px solid #3fbf5f;border-radius:4px;padding:8px 10px;margin:18px 0 6px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
-h2 .ar{font-size:16px;color:#3fbf5f;padding:0 4px}
-#stat{font-size:14px}
-.card{background:linear-gradient(180deg,#07140b,#030805);border:1px solid #1f3a26;border-radius:8px;padding:10px 12px;margin-top:6px}
-.top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.dot{width:10px;height:10px;border-radius:50%;background:#555;flex:none}
-.dot.on{background:#39ff14;box-shadow:0 0 8px #39ff14;animation:pulse 2s ease-in-out infinite}
-.dot.hot{background:#ff5555;box-shadow:0 0 8px #ff5555;animation:pulse 1s ease-in-out infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
-.state{font-weight:600;letter-spacing:1px;font-size:13px;text-transform:uppercase;color:#9cf0b0}
-.pill{font-size:11px;color:#9cf0b0;border:1px solid #2e7d46;border-radius:10px;padding:1px 8px;background:#0b1a10}
-.pill.r{margin-left:auto}
-.big{font-family:Consolas,'Cascadia Mono',monospace;font-size:22px;color:#e4f5e7;margin:8px 0 2px}
-.big small{font-size:12px;color:#7f9a86;margin:0 10px 0 3px}
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
-.tile{background:#0b1a10;border:1px solid #16301e;border-radius:6px;padding:6px 8px;min-width:0}
-.tile b{display:block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#6f8f77;font-weight:600}
-.tile span{font-family:Consolas,'Cascadia Mono',monospace;font-size:13px;color:#d6e8d9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
-.tile.warn span{color:#ff8a8a}
-
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#050805;color:#d6e8d9;margin:0;padding:12px;max-width:420px}
+a{color:#9cf0b0}
+.card{background:#071109;border:1px solid #1f3a26;border-radius:8px;margin:0 0 6px;overflow:hidden}
+.ttl{display:flex;justify-content:space-between;align-items:baseline;padding:8px 10px 6px;background:#050a06;border-bottom:1px solid #1f3a26}
+.ttl b{font-size:20px;font-weight:600;color:#e4f5e7}.ttl i{font-style:normal;color:#39ff14;font-size:11px;font-weight:bold}
+.srow{position:relative;display:flex;gap:9px;align-items:center;height:46px;padding:0 10px 0 16px;margin:8px;background:#0f2416;border:1px solid #1f4a2a;border-radius:8px;overflow:hidden;cursor:pointer;user-select:none}
+.srow:before{content:'';position:absolute;left:0;top:9px;bottom:9px;width:4px;border-radius:0 2px 2px 0;background:#16301e}
+.srow.on:before{background:#39ff14}
+.srow b{font-weight:600;letter-spacing:1px;font-size:15px;color:#cfe8d4}.srow.on b{color:#fff}.srow.hot b{color:#ff6b6b}
+.srow .fmt{margin-left:auto;border:1px solid #2a4a32;border-radius:9px;padding:1px 7px;font-size:11px;color:#8fb596;font-family:Consolas,'Cascadia Mono',monospace;background:#0b1a10}
+.srow.on .fmt{border-color:#39ff14;color:#cfffd2}
+.srow.busy{opacity:.5;pointer-events:none}
+.rl{width:12px;height:12px;border-radius:50%;background:#3a1414;border:1px solid #5a2020;flex:none}
+.on .rl{background:#ff3030;border-color:#ff8080;animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+.body{padding:6px 8px 8px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}.g3+.g3{margin-top:4px}
+.tile{background:#0b1a10;border:1px solid #16301e;border-radius:6px;padding:5px 7px;min-width:0;overflow:hidden}
+.tile.k{border-color:#1f3a26}.tile.k span{font-size:14px;color:#fff}
+.tile b{display:block;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#6f8f77;font-weight:600}
+.tile span{font-family:Consolas,'Cascadia Mono',monospace;font-size:12px;color:#d6e8d9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.tile.dim span{color:#7fae86}.tile.warn span{color:#ff8a8a}
 .meter{height:6px;background:#06100a;border:1px solid #1f3a26;border-radius:3px;overflow:hidden;margin-top:4px}
-.meter>div{height:100%;background:linear-gradient(90deg,#2fa84f,#39ff14);border-radius:2px}
-.meter.mid>div{background:linear-gradient(90deg,#b8a02f,#e8d040)}.meter.low>div{background:linear-gradient(90deg,#a83232,#ff5555)}
-.batt{display:flex;align-items:center;gap:2px;margin-top:4px}.batt .meter{flex:1;height:10px;margin:0;border-radius:3px}
-.batt .cap{width:3px;height:5px;background:#2e7d46;border-radius:0 2px 2px 0}
-.bars{display:flex;align-items:flex-end;gap:3px;height:14px;margin-top:4px}.bars i{display:block;width:6px;background:#16301e;border-radius:1px;margin:0}
-.bars i.on{background:#39ff14;box-shadow:0 0 4px rgba(57,255,20,.5)}.bars.weak i.on{background:#e8d040;box-shadow:none}
-.tile.warn .meter>div,.tile.warn .bars i.on{background:#ff5555;box-shadow:none}
-.tile[data-tip]{cursor:help}
-.notice{display:flex;align-items:center;gap:8px;margin-top:8px;padding:7px 10px;border:1px solid #7d6e2e;border-left:3px solid #e8d040;border-radius:6px;background:#1a1808;color:#e8d8a0;font-size:12px}
+.meter>div{height:100%;background:#39ff14;border-radius:2px}
+.meter.mid>div{background:#e8d040}.meter.low>div{background:#ff5555}
+.bars{display:flex;align-items:flex-end;gap:3px;height:14px;margin-top:4px}.bars i{display:block;width:6px;background:#16301e;border-radius:1px}
+.bars i.on{background:#39ff14}.bars.weak i.on{background:#e8d040}
+.badge{display:inline-flex;align-items:center;gap:5px;margin-top:4px;padding:1px 8px 1px 6px;border-radius:9px;font-size:11px;font-weight:600;border:1px solid #39ff14;color:#cfffd2;background:#0b1a10}
+.badge::before{content:'';width:6px;height:6px;border-radius:50%;background:#39ff14}
+.badge.mid{color:#e8d040;border-color:#7d6e2e}.badge.mid::before{background:#e8d040}
+.badge.bad{color:#ff6b6b;border-color:#7d2e2e}.badge.bad::before{background:#ff5555;animation:pulse 1s ease-in-out infinite}
+.notice{display:flex;align-items:center;gap:8px;margin:6px 0 0;padding:6px 9px;border:1px solid #7d6e2e;border-left:3px solid #e8d040;border-radius:6px;background:#1a1808;color:#e8d8a0;font-size:12px}
 .notice .ni{flex:none;width:16px;height:16px;line-height:16px;text-align:center;border-radius:50%;background:#e8d040;color:#1a1808;font-weight:bold;font-size:11px}
-.notice code{font-family:Consolas,'Cascadia Mono',monospace;color:#fff3b0}
 .notice.bad{border-color:#7d2e2e;border-left-color:#ff5555;background:#1a0808;color:#ffb0b0}.notice.bad .ni{background:#ff5555;color:#1a0808}
-.badge{display:inline-flex;align-items:center;gap:6px;margin-top:5px;padding:2px 9px 2px 7px;border-radius:11px;font-size:12px;font-weight:600;letter-spacing:.3px;border:1px solid #2e7d46;color:#39ff14;background:#0f2a17}
-.badge::before{content:'';width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 6px currentColor}
-.badge.mid{color:#e8d040;border-color:#7d6e2e;background:#2a2610}.badge.bad{color:#ff5555;border-color:#7d2e2e;background:#2a1010}
-.badge.bad::before{animation:pulse 1s ease-in-out infinite}
-.tip{display:inline-block;width:15px;height:15px;line-height:15px;text-align:center;border-radius:50%;border:1px solid #2e7d46;color:#3fbf5f;font-size:10px;font-style:normal;font-weight:bold;cursor:help;margin-left:6px;vertical-align:middle}
+.notice code{font-family:Consolas,'Cascadia Mono',monospace;color:#fff3b0}
+.notice button{margin:0 0 0 auto;padding:4px 10px;font-size:12px}
+.grp{background:#071109;border:1px solid #1f3a26;border-radius:8px;padding:6px 8px 3px;margin:0 0 6px}
+.grp h4{margin:0 0 4px 2px;font-size:10px;font-weight:600;letter-spacing:1px;color:#7fae86}
+.svc{display:flex;align-items:center;gap:7px;border:1px solid #2a4a32;border-radius:12px;padding:3px 9px;margin:0 0 4px;font-family:Consolas,'Cascadia Mono',monospace;font-size:11px;color:#6e9a76;background:#0b1a10}
+.svc:before{content:'';width:7px;height:7px;border-radius:50%;background:#555;flex:none}
+.svc b{font-weight:400;color:#8fb596;min-width:34px}.svc code{font-family:inherit;color:inherit;user-select:all;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.svc span{margin-left:auto;color:#7f9a86;font-family:'Segoe UI',sans-serif;flex:none}
+.svc.on{border-color:#39ff14;color:#cfffd2}.svc.on:before{background:#39ff14}
+.svc.q{border-color:#7d6e2e;color:#e8d8a0}.svc.q:before{background:#e0b030}
+.bar{position:relative;display:flex;justify-content:space-between;align-items:center;height:46px;padding:0 10px 0 16px;background:#071109;border:1px solid #1f3a26;border-radius:8px;margin:0 0 6px;cursor:pointer;user-select:none;overflow:hidden}
+.bar:before{content:'';position:absolute;left:0;top:9px;bottom:9px;width:4px;border-radius:0 2px 2px 0;background:#16301e}
+.bar .n{font-size:14px;font-weight:500;color:#d8f5dc}.bar .s{font-size:11px;letter-spacing:.5px;color:#7fae86;font-family:Consolas,'Cascadia Mono',monospace}
+.bar.on:before{background:#39ff14}.bar.on .s{color:#39ff14}
+.bar.dis,.sw.dis{opacity:.45}.pk.dis{opacity:.5}
+.dr{background:#071109;border:1px solid #1f3a26;border-radius:8px;margin:0 0 6px}
+.dh{display:flex;justify-content:space-between;align-items:center;padding:10px;background:#0a160d;color:#a8f0b0;font-weight:600;letter-spacing:1px;font-size:13px;cursor:pointer;user-select:none;border-radius:7px 7px 0 0}
+.dh.c{border-radius:7px}
+.dh i{font-style:normal;color:#a8f0b0}
+.db{padding:6px 8px 4px;border-top:1px solid #1f3a26}
+.sw{position:relative;display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:40px;border:1px solid #142a1a;border-radius:6px;background:#0a160d;padding:7px 9px 7px 15px;margin:0 0 4px;cursor:pointer;user-select:none;overflow:hidden}
+.sw:before{content:'';position:absolute;left:0;top:7px;bottom:7px;width:4px;border-radius:0 2px 2px 0;background:#16301e}
+.sw .n{font-size:12px;color:#d8f5dc;line-height:1.3}.sw .s{font-size:11px;color:#7fae86;font-family:Consolas,'Cascadia Mono',monospace;flex:none}
+.sw.on:before{background:#39ff14}.sw.on .s{color:#39ff14}
+.sub{margin-left:12px}
+.fld{border:1px solid #142a1a;border-radius:6px;background:#0a160d;padding:6px 9px 7px;margin:0 0 4px}
+.fld b{display:block;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#6f8f77;font-weight:600}
+.fld code{display:block;font-family:Consolas,'Cascadia Mono',monospace;font-size:12px;color:#cfffd2;margin-top:3px;word-break:break-all;user-select:all}
+.pk{position:relative;cursor:pointer;user-select:none}.pk.open{border-color:#39ff14;z-index:30}
+.pk .pv{display:flex;justify-content:space-between;align-items:center;font-family:Consolas,'Cascadia Mono',monospace;font-size:14px;color:#cfffd2;margin-top:3px}
+.pk .pv i{font-style:normal;color:#3fbf5f}
+.pk .list{display:none;position:absolute;left:-1px;right:-1px;top:100%;margin-top:3px;background:#071109;border:1px solid #39ff14;border-radius:6px;z-index:20;overflow:hidden;max-height:320px;overflow-y:auto;box-shadow:0 8px 20px rgba(0,0,0,.7)}
+.pk.open .list{display:block}
+.pk .list div{position:relative;padding:9px 12px 9px 16px;font-family:Consolas,'Cascadia Mono',monospace;font-size:13px;color:#9cc3a2;border-bottom:1px solid #0e2014}
+.pk .list div:last-child{border-bottom:0}.pk .list div:hover{background:#0e2014;color:#cfffd2}
+.pk .list div.a{background:#163a1e;color:#cfffd2}.pk .list div.a:before{content:'';position:absolute;left:0;top:9px;bottom:9px;width:3px;background:#39ff14;border-radius:0 2px 2px 0}
+.sl .t{display:flex;justify-content:space-between;align-items:center}
+.sl .val{display:flex;align-items:baseline;gap:6px;margin-top:3px}
+.sl .val em{font-style:normal;font-family:Consolas,'Cascadia Mono',monospace;font-size:14px;color:#fff}
+.sl .val small{font-size:10px;color:#7fae86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.seg{display:inline-flex;border:1px solid #1f3a26;border-radius:10px;overflow:hidden;font-size:10px;cursor:pointer}
+.seg span{padding:2px 9px;color:#7fae86}.seg span.a{background:#1f3a26;color:#cfffd2}
+input[type=range]{width:100%;accent-color:#39ff14;margin:8px 0 0}input[type=range]:disabled{opacity:.35}
+.sl.off .val em{color:#7fae86}
+input[type=text],input[type=password],input:not([type]){background:#06100a;color:#d6e8d9;border:1px solid #1f3a26;border-radius:6px;padding:7px 9px;font-size:13px;width:100%;box-sizing:border-box;margin:4px 0 0}
+button{background:#0e2a14;color:#e6ffe8;border:1px solid #2e7d46;border-radius:6px;padding:8px 12px;font-size:13px;cursor:pointer;width:100%;margin:4px 0 0}
+button:hover:not(:disabled){background:#18452b}button:disabled{opacity:.35}
+.tip{display:inline-block;width:14px;height:14px;line-height:13px;text-align:center;border-radius:50%;border:1px solid #3fbf5f;color:#3fbf5f;font-size:9px;font-style:normal;font-weight:bold;cursor:help;margin-left:6px;vertical-align:middle;flex:none}
 #tipbox{position:fixed;display:none;max-width:260px;background:#0b1a10;border:1px solid #2e7d46;color:#d6e8d9;padding:8px 10px;border-radius:6px;font-size:12px;line-height:1.45;z-index:50;box-shadow:0 6px 16px rgba(0,0,0,.7);pointer-events:none}
-.vrow{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.vrow select{max-width:none;flex:1 1 30%}
-button.tog{margin-top:0;padding:6px 10px;font-size:13px;background:#0b1a10;color:#7f9a86;border-color:#1f3a26}
-button.tog.on{background:#18452b;color:#39ff14;border-color:#39ff14;box-shadow:0 0 8px rgba(57,255,20,.35)}
-.btnrow{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-.modal{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:40;padding:16px}
-.modal.open{display:flex}.mbody{background:#07140b;border:1px solid #2e7d46;border-radius:10px;padding:14px 16px;max-width:440px;width:100%;box-shadow:0 0 24px rgba(57,255,20,.15)}
-.mbody h3{margin:0 0 10px;font-size:15px;color:#9cf0b0;letter-spacing:.5px}
-.addr{margin:8px 0}.addr b{display:block;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#6f8f77}
-.addr code{display:block;font-family:Consolas,'Cascadia Mono',monospace;font-size:13px;color:#e4f5e7;background:#030805;border:1px solid #16301e;border-radius:4px;padding:6px 8px;margin-top:3px;word-break:break-all;user-select:all}
-.bad{color:#ff6b6b;font-size:13px;margin-top:4px}
+.bad{color:#ff6b6b;font-size:12px;font-weight:bold;margin:2px 0 4px}
+#msg{color:#e9a;font-size:12px;min-height:16px;margin:4px 2px}
+.lg{font-family:Consolas,'Cascadia Mono',monospace;font-size:11px;color:#b9cfbd;white-space:pre-wrap;word-break:break-word;max-height:300px;overflow:auto}
 </style></head><body>
-<h1><span>W10MSecurityCam</span><span id='ver'></span></h1>
-<h2>Status</h2>
-<div class='row'><div id='stat'>loading...</div><div id='warn'></div></div>
-<h2>Video</h2>
-<div class='bad' id='ta3' style='display:none;font-weight:bold'>THERMAL RECOVERY MODE: video lowered to 1080p / 6 Mbps until charging resumes</div>
-<div class='row'>
-<div class='vrow'><select id='fmt'></select><select id='br'></select>
-<button id='hb' class='tog' data-tip='High bandwidth mode unlocks bitrates above 24 Mbps. Needs 5 GHz Wi-Fi or a USB-C connection; on 2.4 GHz the stream drops frames.'>High BW</button></div>
-<div class='btnrow' style='margin-top:8px'><button id='ss'>Stop stream</button><button id='wa2'>Stream addresses</button><button id='eng' style='display:none'>Return to normal mode</button></div>
-<div class='sub' id='safe' style='color:#e9a'></div></div>
-<div class='modal' id='addrbox'><div class='mbody'><h3>Watch the stream (VLC, NVR)</h3><div id='addr'></div>
-<div class='sub' style='margin:8px 0 0'>Put the stream login in place of USER:PASSWORD. The USB addresses work on the PC the phone is plugged into.</div>
-<button id='addrclose'>Close</button></div></div>
-<h2>Camera</h2><div class='sub' id='now'></div>
-<div class='row'><label><input type='checkbox' id='all'> Automatic focus, exposure and white balance</label></div>
-<div class='row'><div class='head'><span id='fl'>Focus</span><label><input type='checkbox' id='fa'> Auto</label></div>
-<input type='range' id='fs' min='0' max='100' step='1'>
-<button id='fo'>Focus once and lock</button></div>
-<div class='row'><div class='head'><span id='el'>Exposure</span><label><input type='checkbox' id='ea'> Auto</label></div>
-<input type='range' id='es' min='0' max='100' step='0.5'></div>
-<div class='row'><div class='head'><span id='wl'>White balance</span><label><input type='checkbox' id='wa'> Auto</label></div>
-<input type='range' id='ws' min='2000' max='8000' step='100'></div>
-<div class='bad' id='ta1' style='display:none;font-weight:bold'>THERMAL RECOVERY MODE: flashlight unavailable until charging resumes</div>
-<div class='row'><div class='head'><span><span id='tl'>Flashlight</span><i class='tip' data-tip='Only while streaming. Switches off by itself after 30 seconds: the LED heats the phone quickly and this phone cannot dim it.'>i</i></span><label><input type='checkbox' id='tt'> On</label></div>
-<div class='sub' id='tinfo'></div></div>
-<h2>Power</h2>
-<div class='bad' id='ta2' style='display:none;font-weight:bold'>THERMAL RECOVERY MODE: unavailable until charging resumes - power saving is forced on</div>
-<div class='row'><div class='btnrow'><button id='ps'>Black out the phone screen</button><i class='tip' id='pinfo' data-tip='x'>i</i></div></div>
-<div class='row'><label><input type='checkbox' id='sall'> Power-saving camera features</label><i class='tip' data-tip='Less processing and heat: stabilization off for a fixed mount, and focus held once it has settled. Untick to choose each one. Changing stabilization restarts the stream once.'>i</i>
-<div id='spanel' style='margin-left:18px'>
-<div><label><input type='checkbox' id='so'> <span id='sol'>Stabilization off (fixed mount)</span></label></div>
-<div><label><input type='checkbox' id='sf'> Hold focus once it has settled</label></div></div></div>
-<h2>Login</h2>
-<div class='row'><div class='sub' style='margin-bottom:6px'><span id='lmsg'>One login protects the stream and this page.</span><i class='tip' data-tip='Use the new login in your NVR / VLC: rtsp://USER:PASSWORD@phone-address:8554/live. The browser asks you to sign in again after a change.'>i</i></div>
-<input id='lu' placeholder='User name'> <input id='lp' type='password' placeholder='New password'> <input id='lp2' type='password' placeholder='Repeat password'>
-<button id='lb'>Change login</button></div>
+
+<div class='card'>
+ <div class='ttl'><b>W10MSecurityCam</b><i id='ver'></i></div>
+ <div class='srow' id='srow'><span class='rl'></span><b id='state'>START STREAM</b><span class='fmt' id='fmt'>-</span></div>
+ <div class='body'>
+  <div class='g3'><div class='tile k dim'><b>FPS</b><span id='tfps'>-</span></div><div class='tile k dim'><b>MBPS</b><span id='tmbps'>-</span></div><div class='tile k dim'><b>VIEWERS</b><span id='tview'>-</span></div></div>
+  <div class='g3' id='tiles'></div>
+  <div id='warn'></div>
+ </div>
+</div>
+<div class='notice' id='ro' style='display:none'><span class='ni'>i</span><span id='rotext'>View only.</span><button id='loginb'>Log in</button></div>
+<div class='bad' id='safe' style='display:none'></div>
+<button id='eng' style='display:none;margin:0 0 6px;background:#3a1010;color:#ffd0d0;border-color:#a03030'>Return to normal mode (low-latency engine)</button>
+
+<div class='grp'><h4>RTSP</h4>
+ <div class='svc' id='rw'><b>Wi-Fi</b><code id='rwa'></code><span id='rwn'></span></div>
+ <div class='svc' id='ru'><b>USB</b><code id='rua'></code><span id='run'></span></div>
+</div>
+<div class='grp'><h4>WEB UI</h4>
+ <div class='svc' id='ww'><b>Wi-Fi</b><code id='wwa'></code><span id='wwn'></span></div>
+ <div class='svc' id='wu'><b>USB</b><code id='wua'></code><span id='wun'></span></div>
+</div>
+
+<div class='bar' id='bpv'><span class='n'>Preview</span><span class='s' id='bpvs'>OFF</span></div>
+<div class='bar' id='bss'><span class='n'>Screensaver</span><span class='s' id='bsss'>ON</span></div>
+<div class='bar' id='btt'><span class='n'>Flashlight</span><span class='s' id='btts'>OFF</span></div>
+
+<div class='dr'><div class='dh' data-f='video'>VIDEO<i>&#x25B8;</i></div><div class='db' id='video'>
+ <div class='bad' id='ta3' style='display:none'>Heat protection: 1080p / 6 Mbps</div>
+ <div class='fld pk' id='fsel' data-k='format'><b>Resolution</b><div class='pv'><span>-</span><i>&#x25BE;</i></div><div class='list'></div></div>
+ <div class='fld pk' id='bsel' data-k='bitrate'><b>Bitrate</b><div class='pv'><span>-</span><i>&#x25BE;</i></div><div class='list'></div></div>
+ <div class='sw' data-k='highbw' id='hb'><span class='n'>High bandwidth (over 24 Mbps)<i class='tip' data-tip='Unlocks bitrates up to 60 Mbps. Needs 5 GHz Wi-Fi or USB; 2.4 GHz drops frames.'>i</i></span><span class='s'>OFF</span></div>
+ <div class='fld pk' id='ksel' data-k='keyframe'><b>Keyframe every</b><div class='pv'><span>-</span><i>&#x25BE;</i></div><div class='list'></div></div>
+ <div class='sw' data-k='audio' id='au'><span class='n'>Microphone audio (AAC)</span><span class='s'>OFF</span></div>
+</div></div>
+
+<div class='dr'><div class='dh' data-f='camera'>CAMERA<i>&#x25B8;</i></div><div class='db' id='camera'>
+ <div class='sw' id='all'><span class='n'>Automatic focus, exposure and white balance</span><span class='s'>ON</span></div>
+ <div class='sw' id='so'><span class='n' id='sol'>Image stabilization<i class='tip' data-tip='Off on a fixed mount saves processing and heat. Changing it restarts the stream once.'>i</i></span><span class='s'>ON</span></div>
+ <div class='sw' id='fo'><span class='n'>Focus once and lock<i class='tip' data-tip='Off: autofocus once and lock the lens there. On (locked, or held by the power-saving hold): press to go back to continuous autofocus.'>i</i></span><span class='s'>OFF</span></div>
+ <div class='fld sl' id='fsl' style='margin-top:4px'><div class='t'><b>Focus</b><span class='seg' id='fseg'><span>Auto</span><span>Manual</span></span></div><div class='val'><em id='fv'>-</em><small id='fn'></small></div><input type='range' id='fs' min='0' max='100' step='1'></div>
+ <div class='fld sl' id='esl'><div class='t'><b>Exposure</b><span class='seg' id='eseg'><span>Auto</span><span>Manual</span></span></div><div class='val'><em id='ev'>-</em><small id='en'></small></div><input type='range' id='es' min='0' max='100' step='0.5'></div>
+ <div class='fld sl' id='wsl'><div class='t'><b>White balance</b><span class='seg' id='wseg'><span>Auto</span><span>Manual</span></span></div><div class='val'><em id='wv'>-</em><small id='wn'></small></div><input type='range' id='ws' min='2000' max='8000' step='100'></div>
+</div></div>
+
+<div class='dr'><div class='dh' data-f='power'>POWER<i>&#x25B8;</i></div><div class='db' id='power'>
+ <div class='sw' data-k='heatprotect' id='hp'><span class='n'>Heat protection<i class='tip' data-tip='When charging pauses on a good charger the phone is hot: 1080p / 6 Mbps, screensaver on, flashlight locked, until it charges normally again. Off: nothing is changed, and on a weak charger the battery drains and the phone dies.'>i</i></span><span class='s'>ON</span></div>
+ <div class='bad' id='ta2' style='display:none'></div>
+ <div class='sw' data-k='keeppreview' id='kp'><span class='n'>Preview on always<i class='tip' data-tip='Off by default. On: the preview runs even behind the screensaver, so a tap shows the picture at once. Costs CPU and heat; heat protection switches it off.'>i</i></span><span class='s'>OFF</span></div>
+</div></div>
+
+<div class='dr'><div class='dh' data-f='net'>NETWORK AND LOGIN<i>&#x25B8;</i></div><div class='db' id='net'>
+ <div class='fld'><b>RTSP address (NVR / VLC)</b><code id='rtspaddr'></code></div>
+ <div class='sw on dis' id='web'><span class='n'>Web page (settings and status)<i class='tip' data-tip='This page. It can only be switched off on the phone (the page would cut itself off).'>i</i></span><span class='s'>ON</span></div>
+ <div class='fld'><b>Web page</b><code id='webaddr'></code></div>
+ <div class='sw' data-k='log' id='lgo'><span class='n'>Log page (<a href='/log' target='_blank'>/log</a>)<i class='tip' data-tip='The app log in a browser (needs the web page on).'>i</i></span><span class='s'>OFF</span></div>
+ <div class='sw' data-k='stats' id='sgo'><span class='n'>Stats page (<a href='/stats' target='_blank'>/stats</a>)<i class='tip' data-tip='Graphs of the last 12 hours (frame rate, battery, power, CPU, memory, heat), sampled every 30 s while on.'>i</i></span><span class='s'>OFF</span></div>
+ <div class='sw' data-k='autostart' id='ast'><span class='n'>Start streaming when the app opens</span><span class='s'>ON</span></div>
+ <div class='sw' data-k='udp' id='udp'><span class='n'>Allow RTP over UDP<i class='tip' data-tip='Off: viewers get the stream over TCP, which is more reliable on Wi-Fi.'>i</i></span><span class='s'>OFF</span></div>
+ <div class='sw' data-k='snapshot' id='snap'><span class='n'>Snapshots at /snapshot.jpg</span><span class='s'>OFF</span></div>
+ <div class='fld'><b>Login (stream and web page)</b><div id='lmsg' style='font-size:12px;margin-top:3px'>One login protects the stream and this page.<i class='tip' data-tip='Use the new login in your NVR / VLC: rtsp://USER:PASSWORD@phone-address:8554/live. The browser asks you to sign in again after a change.'>i</i></div>
+  <input id='lc' type='password' placeholder='Current password'><input id='lu' placeholder='User name (admin)'><input id='lp' type='password' placeholder='New password'><input id='lp2' type='password' placeholder='Repeat password'>
+  <button id='lb'>Save login</button></div>
+</div></div>
+
+<div class='dr'><div class='dh' data-f='viewer'>VIEWER SETUP<i>&#x25B8;</i></div><div class='db' id='viewer'>
+ <div style='font-size:11px;color:#7fae86;margin:0 2px 6px;line-height:1.4'>Which address: Wi-Fi addresses work from any device on the same network; USB addresses (127.0.0.1) only on the PC the phone is plugged into. The stream is standard RTSP (H.264), so NVRs and players need no special options beyond the login and TCP transport.</div>
+ <div class='fld'><b>Stream addresses</b><code id='vaddr'></code></div>
+ <div class='fld'><b>NVR (Blue Iris, Frigate, Synology, ...)</b><code id='vnvr'></code></div>
+ <div class='fld'><b>VLC</b><code id='vvlc'></code></div>
+ <div class='fld'><b>OBS Studio (as a webcam)</b><code id='vobs'></code></div>
+ <div class='fld'><b>ffplay (quick test)</b><code id='vffp'></code></div>
+ <div class='fld'><b>Snapshot (still picture)</b><code id='vsnap'></code></div>
+</div></div>
+
+<div class='dr'><div class='dh' data-f='details'>DETAILS AND LOG<i>&#x25B8;</i></div><div class='db' id='details'>
+ <div class='fld'><b>Now</b><code id='now'></code></div>
+ <div class='fld'><b>Log (last lines)</b><div class='lg' id='logtail'>-</div></div>
+</div></div>
 <div id='msg'></div><div id='tipbox'></div>
 <script>
 var st=null,touched=0,t=null;
 function $(i){return document.getElementById(i)}
+function esc(t){return String(t).replace(/[&<>""']/g,function(c){return '&#'+c.charCodeAt(0)+';'})}
 function e2s(ms){return 100*Math.log(ms/st.expMin)/Math.log(st.expMax/st.expMin)}
 function s2e(v){return st.expMin*Math.pow(st.expMax/st.expMin,v/100)}
-function fill(sel,vals,txt){
- var key=vals.join('|');if(sel.dataset.k===key)return;sel.dataset.k=key;sel.innerHTML='';
- vals.forEach(function(v){var o=document.createElement('option');o.value=v;o.textContent=txt(v);sel.appendChild(o)})
+// a picker tile: the current value on the tile, the themed list below it while open; a tap on a row sends the key
+function pick(id,vals,txt,cur,dis){
+ var e=$(id),l=e.querySelector('.list'),key=vals.join('|')+'#'+cur;
+ e.querySelector('.pv span').textContent=txt(cur===undefined||cur===null||cur===''?vals[0]:cur);
+ e.className='fld pk'+(e.className.indexOf('open')>=0?' open':'')+(dis?' dis':'');
+ if(l.dataset.k===key)return;l.dataset.k=key;l.innerHTML='';
+ vals.forEach(function(v){var o=document.createElement('div');o.textContent=txt(v);if(String(v)===String(cur))o.className='a';
+  o.onclick=function(ev){ev.stopPropagation();e.className='fld pk';var k=e.getAttribute('data-k');if(k==='keyframe')send('keyframe='+v);else video(k,v)};l.appendChild(o)})
 }
+document.addEventListener('click',function(ev){var ps=document.querySelectorAll('.pk');for(var i=0;i<ps.length;i++){var p=ps[i];if(p.contains(ev.target)){if(p.className.indexOf('dis')>=0){locked();return}p.className=p.className.indexOf('open')>=0?'fld pk':'fld pk open'}else p.className=p.className.replace(' open','')}});
+function sw(id,on,dis,txt){var e=$(id);e.className='sw'+(on?' on':'')+(dis?' dis':'');e.lastElementChild.textContent=txt||(on?'ON':'OFF')}
+function bar(id,on,dis,txt){var e=$(id);e.className='bar'+(on?' on':'')+(dis?' dis':'');e.lastElementChild.textContent=txt}
+function svc(id,cls,addr,note){$(id).className='svc'+(cls?' '+cls:'');$(id+'a').textContent=addr;$(id+'n').textContent=note||''}
+function seg(id,auto){var s=$(id).children;s[0].className=auto?'a':'';s[1].className=auto?'':'a'}
+function meter(p,cls){p=Math.max(0,Math.min(100,p||0));return ""<div class='meter ""+(cls||'')+""'><div style='width:""+p+""%'></div></div>""}
+function tile(l,v,w,g,tip){return ""<div class='tile""+(w?' warn':'')+""'""+(tip?"" data-tip='""+esc(tip)+""'"":'')+'><b>'+esc(l)+'</b>'+(v===''?'':'<span>'+esc(v)+'</span>')+(g||'')+'</div>'}
+function badge(t,c){return ""<div class='badge ""+(c||'')+""'>""+esc(t)+'</div>'}
 function render(){
  if(!st||Date.now()-touched<2500)return;
- fill($('fmt'),st.formats,function(v){return v.replace('x',' x ').replace('@',' @ ')+' fps'});
- fill($('br'),st.bitrates,function(v){return v=='auto'?'Bitrate: auto':v+' Mbps'});
- $('fmt').value=st.format;$('br').value=st.bitrate;
- $('hb').className='tog'+(st.highBw?' on':'');$('hb').textContent=st.highBw?'High BW on':'High BW';
- $('fo').disabled=$('ps').disabled=!st.canWrite;
- $('ps').textContent=st.blackout?'Phone screen is black - wake it':'Black out the phone screen';
- $('fmt').disabled=$('br').disabled=$('hb').disabled=!st.canWrite;
- $('ss').textContent=st.streaming?'Stop stream':'Start stream';$('ss').disabled=!st.canWrite;
- $('eng').style.display=st.safeMode?'inline-block':'none';$('eng').disabled=!st.canWrite;
- $('safe').textContent=st.safeMode?'Safe mode: the app is using its fallback engine, limited to 1080p. Return to normal mode to use 4K.':'';
- var h=location.hostname,u=st.loginSet?'USER:PASSWORD@':'';
- var usb='127.0.0.1:'+st.usbPort;
- var ad=function(l,v){return ""<div class='addr'><b>""+l+'</b><code>'+v.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</code></div>'};
- $('addr').innerHTML=ad('Wi-Fi (RTSP)','rtsp://'+u+h+':'+st.rtspPort+st.streamPath)
-  +ad('USB cable (on the PC it is plugged into)','rtsp://'+usb+st.streamPath)
-  +ad('This page over USB','http://'+usb+'/camera')
-  +ad('Live log (Wi-Fi)','http://'+location.host+'/log')
-  +ad('Live log (USB)','http://'+usb+'/log');
- $('now').textContent=st.mode+' - '+st.now;
- var bt=st.battery==null?'unknown':st.battery+'% ('+st.batteryStatus.toLowerCase()+')';
- var up=Math.round(st.uptime/60),upt=up>=120?Math.round(up/6)/10+' h':up+' min';
+ var w=st.canWrite,s=st.streaming,p=st.protect;
  if(st.version)$('ver').textContent='v'+st.version;
- var esc=function(t){return String(t).replace(/[&<>""']/g,function(c){return '&#'+c.charCodeAt(0)+';'})};
- var cpu=/phone (\d+) %, app (\d+)/.exec(st.cpuText||''),fm=/^(\d+)x(\d+)@(\d+)/.exec(st.format||'');
- var res=fm?(fm[2]>=2160?'4K':fm[2]+'p')+fm[3]:'';
- var state=st.protect?'Heat protection':st.streaming?'Streaming':'Stopped',dc=st.protect?'dot hot':st.streaming?'dot on':'dot';
- var tile=function(l,v,w,g,tip){return ""<div class='tile""+(w?' warn':'')+""'""+(tip?"" data-tip='""+esc(tip)+""'"":'')+'><b>'+esc(l)+'</b>'+(v===''?'':'<span>'+esc(v)+'</span>')+(g||'')+'</div>'};
- var badge=function(t,c){return ""<div class='badge ""+(c||'')+""'>""+esc(t)+'</div>'};
- var meter=function(p,cls){p=Math.max(0,Math.min(100,p||0));return ""<div class='meter ""+(cls||'')+""'><div style='width:""+p+""%'></div></div>""};
- var bp=st.battery==null?0:st.battery,bcls=bp<20?'low':bp<40?'mid':'';
- var batt=""<div class='batt'>""+meter(bp,bcls)+""<span class='cap'></span></div>"";
+ var fm=/^(\d+)x(\d+)@(\d+)/.exec(st.format||''),res=fm?(fm[2]>=2160?'4K':fm[2]+'p')+fm[3]:'-';
+ $('srow').className='srow'+(s?' on':'')+(p?' hot':'')+(w?'':' busy');
+ $('state').textContent=p?'HEAT PROTECTION':s?'STREAMING':'START STREAM';$('fmt').textContent=res;
+ $('tfps').textContent=s?Math.round(st.fps):'-';$('tmbps').textContent=s?(+st.mbps).toFixed(1):'-';$('tview').textContent=s?st.viewers:'-';
+ var kt=document.querySelectorAll('.tile.k');for(var i=0;i<kt.length;i++)kt[i].className='tile k'+(s?'':' dim');
+ var cpu=/phone (\d+) %, app (\d+)/.exec(st.cpuText||''),cpuP=cpu?+cpu[1]:0,cpuA=cpu?+cpu[2]:0,ml=st.memoryLimitMB||1536,mp=100*st.memoryMB/ml;
+ var bp=st.battery==null?0:st.battery,bcls=st.batteryFalling||bp<20?'low':bp<40?'mid':'';
  var wb=st.wifiBars==null?0:st.wifiBars,bars=""<div class='bars""+(wb<2?' weak':'')+""'>"";
  for(var k=1;k<=4;k++)bars+=""<i class='""+(k<=wb?'on':'')+""' style='height:""+(2+k*3)+""px'></i>"";bars+='</div>';
- var cpuP=cpu?+cpu[1]:0,cpuA=cpu?+cpu[2]:0,ml=st.memoryLimitMB||1536,mp=100*st.memoryMB/ml;
- var lat=st.latencyMs==null||st.latencyMs<0?null:st.latencyMs;
- var nw=st.netWatts,pw=null,pl=st.charging?'Into battery':'Battery draw';
+ var lat=st.latencyMs==null||st.latencyMs<0?null:st.latencyMs,nw=st.netWatts,pw=null,pl=st.charging?'Into battery':'Battery draw';
  if(!st.charging&&st.drawWatts!=null)pw=Math.abs(st.drawWatts);else if(nw!=null)pw=st.charging?nw:Math.abs(nw);
  var pv=pw==null?'measuring':(st.charging&&pw>=0?'+':'')+pw.toFixed(1)+' W';
  var pbar=pw==null?'':meter(100*Math.abs(pw)/15,st.charging?(pw<0?'low':pw<1?'mid':''):(pw>8?'low':'mid'));
- $('stat').innerHTML=""<div class='card'><div class='top'><span class='""+dc+""'></span><span class='state'>""+esc(state)+'</span>'
-  +(res?""<span class='pill'>""+esc(res)+'</span>':'')
-  +""<span class='pill'>up ""+esc(upt)+'</span>'
-  +""<span class='pill r'>""+esc(st.viewers+' viewer'+(st.viewers==1?'':'s'))+'</span></div>'
-  +(st.streaming?""<div class='big'>""+esc(Math.round(st.fps))+'<small>fps</small>'+esc(st.mbps.toFixed?st.mbps.toFixed(1):st.mbps)+'<small>Mbps</small></div>':'')
-  +""<div class='grid'>""
-  +tile('Battery',st.battery==null?'n/a':st.battery+'% '+st.batteryStatus.toLowerCase(),st.batteryFalling,batt)
+ $('tiles').innerHTML=tile('Battery',st.battery==null?'n/a':st.battery+'% '+st.batteryStatus.toLowerCase(),st.batteryFalling,meter(bp,bcls))
   +tile('Wi-Fi',st.wifiBars==null?'n/a':wb+' of 4',st.wifiBars!=null&&wb<2,bars)
-  +tile('Temp','',false,badge(st.heat||'n/a',st.heatWarn?'bad':''),st.heatDetail||'Healthy while the phone charges normally. Unstable when Windows pauses charging on a good charger, which it does when the battery is hot.')
-  +tile('CPU phone',cpuP+'%',false,meter(cpuP,cpuP>70?'mid':''),'Whole phone. The camera, encoder and Wi-Fi do most of their work outside the CPU.')
+  +tile('Temp','',false,badge(st.heatBadge||st.heat||'n/a',st.heatLevel==2?'bad':st.heatLevel==1?'mid':''),st.heatDetail||'Windows gives apps no temperature. Hot means charging has paused on a good charger for 20 s.')
+  +tile('CPU phone',cpuP+'%',false,meter(cpuP,cpuP>70?'mid':''))
   +tile('CPU app',cpuA+'%',false,meter(cpuA,cpuA>50?'mid':''))
   +tile('Memory',st.memoryMB+' MB',mp>80,meter(mp,mp>80?'low':mp>60?'mid':''),'App memory, of '+ml+' MB allowed.')
-  +tile('Engine','',false,badge(st.safeMode?'Safe mode':(st.engine||'n/a'),st.safeMode?'mid':st.streaming?'':'mid'),st.safeMode?'Safe mode: the fallback MP4 engine, limited to 1080p.':'Fast: the low-latency engine, the encoder hands each frame straight to the stream.')
-  +tile('Latency',lat==null?'n/a':lat+' ms',lat!=null&&lat>250,meter(lat==null?0:lat/3,lat>250?'low':lat>150?'mid':''),'Sensor to encoded frame, measured inside the phone (10 s average). Network and player delay come on top.')
-  +tile(pl,pv,st.batteryFalling,pbar,(st.powerText||'')+' Bar scale: 0-15 W.')
-  +'</div></div>';
+  +tile('Engine','',false,badge(st.safeMode?'Safe mode':(st.engine||'n/a'),st.safeMode?'mid':s?'':'mid'))
+  +tile('Latency',lat==null?'-':lat+' ms',lat!=null&&lat>250,meter(lat==null?0:lat/3,lat>250?'low':lat>150?'mid':''),'Sensor to encoded frame inside the phone. Network and player delay come on top.')
+  +tile(pl,pv,st.batteryFalling,pbar,(st.powerText||'')+' Bar scale: 0-15 W.');
  var nh='';
  if(st.heatWarn)nh+=""<div class='notice bad'><span class='ni'>!</span><span>""+esc(st.heatDetail||'Temperature unstable.')+'</span></div>';
- if(st.defaultLogin)nh+=""<div class='notice'><span class='ni'>!</span><span>Default login <code>admin / admin</code> in use. Change it under Login.</span></div>"";
+ if(st.defaultLogin)nh+=""<div class='notice'><span class='ni'>!</span><span>Default login <code>admin / admin</code> in use. Change it under Network and login.</span></div>"";
+ if(st.chargerNotice)nh+=""<div class='notice'><span class='ni'>!</span><span>""+esc(st.chargerNotice)+'</span></div>';
  $('warn').innerHTML=nh;
- if(!$('lu').value&&document.activeElement!==$('lu'))$('lu').value=st.user||'admin';
- $('lb').disabled=!st.canWrite;
- $('tt').checked=st.torchOn;
- $('tt').disabled=!st.canWrite||!st.torchSupported||(!st.streaming&&!st.torchOn);
- $('tinfo').textContent=!st.torchSupported?'This camera has no flashlight control.':!st.streaming&&!st.torchOn?'Start the stream to use the flashlight.':st.torchOn?'On - switches off in '+st.torchLeftSec+' s.':'';
- $('sall').checked=st.saveAll;$('spanel').style.display=st.saveAll?'none':'block';
- $('so').checked=st.saveOis;$('sf').checked=st.saveFocus;
- $('so').disabled=!st.canWrite||!st.oisSupported;
- $('sf').disabled=$('sall').disabled=!st.canWrite;
- $('ta1').style.display=$('ta2').style.display=$('ta3').style.display=st.protect?'block':'none';
- $('fmt').disabled=$('br').disabled=$('hb').disabled=!st.canWrite||st.protect;
- if(st.protect){$('sall').disabled=$('so').disabled=$('sf').disabled=$('ps').disabled=$('tt').disabled=true;$('tinfo').textContent='The phone overheated. The stream is lowered, power saving is forced on and the flashlight is locked until charging resumes.'}
- $('sol').textContent='Stabilization off (fixed mount)'+(st.oisSupported?'':' - not offered by this camera');
- $('pinfo').setAttribute('data-tip','Brightness to zero, black screen and preview off while streaming. Windows Battery Saver: '+st.batterySaver+' (an app cannot switch it on; use the phone Settings > Battery).');
- $('all').checked=st.focusAuto&&st.exposureAuto&&st.wbAuto;
- $('fa').checked=st.focusAuto;$('ea').checked=st.exposureAuto;$('wa').checked=st.wbAuto;
- $('fs').value=st.focus;$('es').value=Math.max(0,Math.min(100,e2s(st.exposureMs)));
- $('ws').min=st.wbMin;$('ws').max=st.wbMax;$('ws').value=st.wb;
- var w=st.canWrite;
- ['all','fa','ea','wa'].forEach(function(i){$(i).disabled=!w});
+ $('ro').style.display=w?'none':'flex';$('rotext').textContent='View only. Changes need the stream login'+(st.defaultLogin?' (default admin / admin)':'')+'.';
+ $('safe').style.display=st.safeMode?'block':'none';$('safe').textContent=st.safeMode?'Safe mode: the fallback engine, limited to 1080p.':'';
+ $('eng').style.display=st.safeMode?'block':'none';$('eng').disabled=!w;
+ // service rows, as on the phone
+ var ip=st.wifiIp||'',usb='127.0.0.1:'+st.usbPort,seen=st.usbSeen,cable=st.usbCable,un=seen?'':cable?'cable?':'no USB',uc=seen?'on':cable?'q':'';
+ var vt=function(n){return n>0?n+(n==1?' viewer':' viewers'):''};
+ svc('rw',s&&ip?'on':'',ip?'rtsp://'+ip+':'+st.rtspPort+st.streamPath:'',!ip?'no Wi-Fi':!s?'stopped':vt(st.rtspViewersWifi));
+ svc('ru',s?uc:'','rtsp://'+usb+st.streamPath,!s?'stopped':st.rtspViewersUsb>0?vt(st.rtspViewersUsb):un);
+ svc('ww',ip?'on':'',ip?'http://'+ip+':'+location.port:'',ip?'':'no Wi-Fi');
+ svc('wu',uc,'http://'+usb,un);
+ $('rtspaddr').textContent=ip?'rtsp://'+(st.loginSet?'USER:PASSWORD@':'')+ip+':'+st.rtspPort+st.streamPath:'(no Wi-Fi)';
+ $('webaddr').textContent=(ip?'http://'+ip+':'+location.port+'/camera':'')+'   http://'+usb+'/camera (USB)';
+ // the three buttons
+ var pvOn=st.previewing||st.preview||st.keepPreview;
+ bar('bpv',pvOn,!w,!pvOn?'OFF':st.keepPreview&&!p?'ON · ALWAYS':'ON');
+ bar('bss',st.powerSave,!w||p,!st.powerSave?'OFF':p?'ON · HEAT PROTECTION':s?'ON':'ON · WHILE STREAMING');
+ bar('btt',st.torchOn,!w||p||!st.torchSupported,st.torchOn?'ON · '+st.torchLeftSec+' s':p?'OFF · HEAT PROTECTION':!st.torchSupported?'OFF · NOT ON THIS CAMERA':'OFF');
+ // video
+ $('ta3').style.display=p?'block':'none';
+ pick('fsel',st.formats,function(v){return v.replace('x',' x ').replace('@',' @ ')+' fps'},st.format,!w||p);
+ pick('bsel',st.bitrates,function(v){return v=='auto'?'auto':v+' Mbps'},st.bitrate,!w||p);
+ pick('ksel',['0.5','1','2','3','4'],function(v){return v+' s'},String(st.keyframeSec),!w||p);
+ sw('hb',st.highBw,!w||p);sw('au',st.audioOn,!w);
+ // camera
+ sw('all',st.focusAuto&&st.exposureAuto&&st.wbAuto,!w);
+ var fon=st.focusHeld||st.focusLocked;sw('fo',fon,!w,st.focusHeld?'ON · HELD':fon?'ON · LOCKED':'OFF');
+ seg('fseg',st.focusAuto);seg('eseg',st.exposureAuto);seg('wseg',st.wbAuto);
+ $('fsl').className='fld sl'+(st.focusAuto?' off':'');$('esl').className='fld sl'+(st.exposureAuto?' off':'');$('wsl').className='fld sl'+(st.wbAuto?' off':'');
+ $('fs').value=st.focus;$('es').value=Math.max(0,Math.min(100,e2s(st.exposureMs)));$('ws').min=st.wbMin;$('ws').max=st.wbMax;$('ws').value=st.wb;
  $('fs').disabled=!w||st.focusAuto;$('es').disabled=!w||st.exposureAuto;$('ws').disabled=!w||st.wbAuto;
  labels();
- if(!w)$('msg').textContent='View only.';
+ // power
+ sw('hp',st.heatProtect,!w);
+ var hot=!p&&!st.heatProtect&&st.heatLevel>=2;
+ $('ta2').textContent=p?'Heat protection: power saving forced on':'HOT and heat protection is off: nothing is done about it - the battery drains on a weak charger';$('ta2').style.display=p||hot?'block':'none';
+ sw('kp',st.keepPreview,!w||p);
+ sw('so',!st.saveOis,!w||p||!st.oisSupported,!st.oisSupported?'NOT ON THIS CAMERA':!st.saveOis?'ON':'OFF');
+ // network
+ sw('lgo',st.logOn,!w);sw('sgo',st.statsOn,!w);sw('ast',st.autoStart,!w);sw('udp',st.udp,!w);sw('snap',st.snapshot,!w);
+ if(!$('lu').value&&document.activeElement!==$('lu'))$('lu').value=st.user||'admin';$('lb').disabled=!w;
+ $('now').textContent=(st.mode||'')+' - '+(st.now||'');
+ // viewer setup, from the live addresses (the login goes in place of USER:PASSWORD)
+ var lg=st.loginSet?'USER:PASSWORD@':'',wr=ip?'rtsp://'+lg+ip+':'+st.rtspPort+st.streamPath:'(no Wi-Fi)',ur='rtsp://'+lg+usb+st.streamPath;
+ var tr=st.udp?'':' -rtsp_transport tcp';
+ $('vaddr').textContent='Wi-Fi  '+wr+'\nUSB    '+ur;
+ $('vnvr').textContent='Add a camera of type RTSP / generic / FFmpeg with the address above.\nTransport: TCP'+(st.udp?' (UDP is allowed too)':'')+'. Login: the stream login'+(st.loginSet?' (the browser prompt is the same one)':' (admin / admin until changed)')+'.\nKeyframe every '+st.keyframeSec+' s: recordings cut at keyframes.';
+ $('vvlc').textContent='Media > Open Network Stream, paste the address.\nOr: vlc '+(st.udp?'':'--rtsp-tcp ')+(ip?wr:ur);
+ $('vobs').textContent='Add a Media Source, untick Local File, then\nInput\n  '+(ip?wr:ur)+'\nInput format\n  rtsp\nFFmpeg options\n  rtsp_transport=tcp fflags=nobuffer flags=low_delay\nThen Start Virtual Camera and pick OBS Virtual Camera in your video app.';
+ $('vffp').textContent='ffplay'+tr+' -fflags nobuffer -flags low_delay '+(ip?wr:ur);
+ $('vsnap').textContent=st.snapshot?('http://'+(ip?ip+':'+location.port:usb)+'/snapshot.jpg  (login needed)'):'Switch Snapshots on under Network and login; then http://'+(ip?ip+':'+location.port:usb)+'/snapshot.jpg';
 }
 function labels(){
- $('fl').textContent='Focus: '+(st.focusAuto?'automatic':Math.round($('fs').value)+' (0 near - 100 far)');
- var ms=s2e($('es').value);
- $('el').textContent='Exposure: '+(st.exposureAuto?'automatic':ms.toFixed(ms<10?2:1)+' ms (1/'+Math.round(1000/ms)+' s)');
- $('wl').textContent='White balance: '+(st.wbAuto?'automatic':$('ws').value+' K');
+ var iso=/ISO (\d+)/.exec(st.now||''),isoT=iso?' · ISO '+iso[1]:'';
+ $('fv').textContent=st.focusAuto?'auto':Math.round($('fs').value);
+ $('fn').textContent=st.focusHeld?'held, lens parked':st.focusAuto?'continuous':st.focusLocked?'locked · 0 near, 100 far':'0 near, 100 far';
+ var ms=s2e($('es').value),mt=ms.toFixed(ms<10?2:1);
+ $('ev').textContent=st.exposureAuto?'auto':mt+' ms';
+ $('en').textContent=(st.exposureAuto?st.exposureMs.toFixed(st.exposureMs<10?2:1)+' ms (1/'+Math.round(1000/Math.max(0.001,st.exposureMs))+' s)':'1/'+Math.round(1000/ms)+' s')+isoT+(st.exposureAuto?' now':'');
+ $('wv').textContent=st.wbAuto?'auto':$('ws').value+' K';
+ $('wn').textContent=st.wbAuto?st.wb+' K now':'';
 }
-function send(body){
+// view only (no login yet): any tap on a control goes to the login page instead of doing nothing
+function locked(){if(st&&st.canWrite)return false;$('msg').textContent='View only - log in to change settings';location.href='/login';return true}
+function send(body){if(locked())return;
  touched=Date.now();
  fetch('/camera/set',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','X-Requested-With':'W10MSecurityCam'},body:body})
- .then(function(r){return r.ok?r.json():r.text().then(function(x){throw new Error(x)})})
+ .then(function(r){if(r.status==401){location.href='/login';throw new Error('Login needed')}return r.ok?r.json():r.text().then(function(x){throw new Error(x)})})
  .then(function(j){st=j;touched=0;render();if(j.result)$('msg').textContent=j.result})
  .catch(function(e){$('msg').textContent=e.message})
 }
 function load(){
- fetch('/camera/state').then(function(r){return r.json()}).then(function(j){st=j;render()}).catch(function(){});
+ fetch('/camera/state').then(function(r){return r.json()}).then(function(j){
+  if(st&&st.version&&j.version&&j.version!==st.version){location.reload();return}
+  st=j;render()}).catch(function(){});
+ if($('details').style.display!=='none')fetch('/log').then(function(r){return r.ok?r.text():''}).then(function(x){if(x){var l=x.trim().split('\n');$('logtail').textContent=l.slice(-25).join('\n')}}).catch(function(){});
 }
 function later(body){clearTimeout(t);t=setTimeout(function(){send(body)},400)}
+$('loginb').onclick=function(){location.href='/login'};
+$('srow').onclick=function(){if(!st||st.canWrite)send('stream='+(st&&st.streaming?'stop':'start'))};
+$('bpv').onclick=function(){var on=st&&(st.previewing||st.preview||st.keepPreview);send('preview='+(on?'off':'on'))};
+$('bss').onclick=function(){send('powersave='+(st&&st.powerSave?'off':'on'))};
+$('btt').onclick=function(){send('torch='+(st&&st.torchOn?'off':'on'))};
+$('eng').onclick=function(){send('engine=normal')};
+$('so').onclick=function(e){if(e.target.className==='tip')return;send('saveois='+(st&&st.saveOis?'off':'on'))};
+$('fo').onclick=function(e){if(e.target.className==='tip')return;if(st&&(st.focusHeld||st.focusLocked)){send('focus=auto')}else{$('msg').textContent='Focusing...';send('focus=once')}};
+$('all').onclick=function(){var a=st.focusAuto&&st.exposureAuto&&st.wbAuto;send('camera='+(a?'manual':'auto'))};
+$('fseg').onclick=function(){send('focus='+(st.focusAuto?'manual':'auto'))};
+$('eseg').onclick=function(){send('exposure='+(st.exposureAuto?'manual':'auto'))};
+$('wseg').onclick=function(){send('wb='+(st.wbAuto?'manual':'auto'))};
+$('fs').oninput=function(){touched=Date.now();labels();later('focus='+this.value)};
+$('es').oninput=function(){touched=Date.now();labels();later('exposure='+s2e(this.value).toFixed(3))};
+$('ws').oninput=function(){touched=Date.now();labels();later('wb='+this.value)};
+function video(k,v){send(k+'='+v);$('msg').textContent='Applying - the stream restarts for a moment...'}
+// every switch row: data-k is the config key; the row's current state decides on/off
+var rows=document.querySelectorAll('.sw[data-k]');
+for(var i=0;i<rows.length;i++)rows[i].onclick=function(e){
+ if(e.target.className==='tip'||e.target.tagName==='A')return;
+ var on=(' '+this.className+' ').indexOf(' on ')>=0,k=this.getAttribute('data-k');
+ if(k==='heatprotect'&&on&&!confirm('Turn heat protection off? A hot phone then keeps full video and the screen, and on a weak charger the battery drains until the phone dies.'))return;
+ if(k==='audio'&&!on)$('msg').textContent='Audio on - the camera restarts; the phone may ask for microphone access.';
+ send(k+'='+(on?'off':'on'))};
 $('lb').onclick=function(){
  var u=$('lu').value.trim(),p=$('lp').value;
  if(p!==$('lp2').value){$('msg').textContent='The two passwords differ';return}
  if(p.length<8){$('msg').textContent='The password needs at least 8 characters';return}
- $('lp').value=$('lp2').value='';
- send('user='+encodeURIComponent(u||'admin')+'&password='+encodeURIComponent(p));
- $('msg').textContent='Login changed - sign in again with the new login'
-};
-$('tt').onchange=function(){send('torch='+(this.checked?'on':'off'))};
-$('sall').onchange=function(){send('savepower='+(this.checked?'on':'off'))};
-$('so').onchange=function(){send('saveois='+(this.checked?'on':'off'))};
-$('sf').onchange=function(){send('savefocus='+(this.checked?'on':'off'))};
-$('hb').onclick=function(){send('highbw='+(st&&st.highBw?'off':'on'))};
-$('wa2').onclick=function(){$('addrbox').className='modal open'};
-$('addrclose').onclick=function(){$('addrbox').className='modal'};
-$('addrbox').onclick=function(e){if(e.target===this)this.className='modal'};
-$('fo').onclick=function(){$('msg').textContent='Focusing...';send('focus=once')};
-$('ps').onclick=function(){send('powersave='+(st&&st.blackout?'off':'on'))};
-$('ss').onclick=function(){send('stream='+(st&&st.streaming?'stop':'start'))};
-$('eng').onclick=function(){send('engine=normal')};
-function video(k,v){send(k+'='+v);$('msg').textContent='Applying - the stream restarts for a moment...'}
-$('fmt').onchange=function(){video('format',this.value)};
-$('br').onchange=function(){video('bitrate',this.value)};
-$('all').onchange=function(){send('camera='+(this.checked?'auto':'manual'))};
-$('fa').onchange=function(){send('focus='+(this.checked?'auto':'manual'))};
-$('ea').onchange=function(){send('exposure='+(this.checked?'auto':'manual'))};
-$('wa').onchange=function(){send('wb='+(this.checked?'auto':'manual'))};
-$('fs').oninput=function(){touched=Date.now();labels();later('focus='+this.value)};
-$('es').oninput=function(){touched=Date.now();labels();later('exposure='+s2e(this.value).toFixed(3))};
-$('ws').oninput=function(){touched=Date.now();labels();later('wb='+this.value)};
-// Every section header folds its section away (a down arrow at the right); the choice is remembered in this browser.
+ if(!$('lc').value){$('msg').textContent='Enter the current password too';return}
+ var c=$('lc').value;$('lc').value=$('lp').value=$('lp2').value='';
+ send('current='+encodeURIComponent(c)+'&user='+encodeURIComponent(u||'admin')+'&password='+encodeURIComponent(p));
+ $('msg').textContent='Changing the login - if it worked, sign in again with the new login'};
+// drawers: the header band opens and closes the body; remembered in this browser (closed by default, as on the phone)
 (function(){
- var saved={};try{saved=JSON.parse(localStorage.getItem('w10m-fold')||'{}')}catch(e){}
- var hs=Array.prototype.slice.call(document.getElementsByTagName('h2'));
- hs.forEach(function(h){
-  var name=h.textContent,body=document.createElement('div'),n=h.nextSibling;
-  while(n&&!(n.nodeType===1&&(n.tagName==='H2'||n.id==='msg'||n.tagName==='SCRIPT'))){var nx=n.nextSibling;body.appendChild(n);n=nx}
-  h.parentNode.insertBefore(body,n);
-  var ar=document.createElement('span');ar.className='ar';h.appendChild(ar);
-  h.setAttribute('role','button');
-  function show(open){body.style.display=open?'':'none';ar.textContent=open?'\u25BE':'\u25B4';h.setAttribute('aria-expanded',open?'true':'false')}
-  show(saved[name]!==false);
-  h.onclick=function(){var open=body.style.display==='none';show(open);saved[name]=open;try{localStorage.setItem('w10m-fold',JSON.stringify(saved))}catch(e){}}
- })
+ var saved={};try{saved=JSON.parse(localStorage.getItem('w10m-fold2')||'{}')}catch(e){}
+ var hs=document.querySelectorAll('.dh');
+ for(var i=0;i<hs.length;i++)(function(h){
+  var name=h.getAttribute('data-f'),body=$(name);
+  function show(open){body.style.display=open?'':'none';h.className='dh'+(open?'':' c');h.lastElementChild.textContent=open?'▾':'▸';if(open&&name==='details')load()}
+  show(saved[name]===true);
+  h.onclick=function(){var open=body.style.display==='none';show(open);saved[name]=open;try{localStorage.setItem('w10m-fold2',JSON.stringify(saved))}catch(e){}}
+ })(hs[i]);
 })();
-// Hover (or tap) anything with data-tip to see its note; the box stays inside the window.
+// hover (or tap) anything with data-tip to see its note
 (function(){
  var box=$('tipbox'),cur=null;
  function find(e){var n=e.target;while(n&&n!==document){if(n.getAttribute&&n.getAttribute('data-tip'))return n;n=n.parentNode}return null}

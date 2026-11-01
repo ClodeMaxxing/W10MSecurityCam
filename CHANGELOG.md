@@ -3,6 +3,102 @@
 Release 1.0 is the first version considered complete for this fork. Build numbers 1.0-1.9 before it were the
 development steps; they are kept in the history table for reference.
 
+## Release 1.4 (build 1.9.59.0)
+
+**The phone screen and the web page redrawn as one.** The web page is now a mirror of the phone: the same card, bars
+and drawers, with two differences only, the *Log in* button and the web-page switch, which the page cannot turn off. A
+tap on a view-only page goes to the login.
+
+- **Status card first**, with the app name as its top band. Its header row is the **stream button**: a tall bar with a
+  green edge light while streaming, a pulsing red light, *STREAMING* / *START STREAM* / *HEAT PROTECTION* and the
+  format pill (`4K30`, `SAFE` in safe mode). Under it the FPS / MBPS / VIEWERS tiles, then the phone tiles and the
+  notices. The button keeps its height whatever the state.
+- **Service groups** RTSP and WEB UI, each with a Wi-Fi and a USB row and the full address. The USB rows turn green
+  once a PC has connected over the cable, amber *cable?* on external power, grey *no USB*; a tap opens *Network and
+  login*.
+- **Preview, Screensaver and Flashlight** are full-width bar buttons with an edge light (green while on). *Black screen
+  while streaming* is now called **Screensaver**; Preview and Screensaver exclude each other. The *Preview on the
+  phone* switch, *Show camera picture (60 s)* and *Black out the screen now* are gone: **Preview** shows the picture for
+  60 s while streaming behind the screensaver, otherwise until it is pressed again; lit, it ends any picture.
+- **Preview on always** (Power; was *Keep the preview running behind the black screen*, off by default) starts the
+  preview when switched on, and the Preview bar then reads *ON · ALWAYS*: no 60 s countdown while it is set.
+- **Drawers** (Video, Camera, Power, Network and login, Viewer setup, Details and log) are rounded cards with header
+  bands; every switch is a row with an edge light; resolution, bitrate and keyframe are picker tiles with a themed
+  list; focus, exposure and white balance are value tiles (name, Auto / Manual segment, the value with the ISO or the
+  Kelvin, the slider). **Focus once and lock** is an on/off row (*ON · LOCKED*, *ON · HELD*; pressed while on it
+  releases to continuous autofocus). **Image stabilization** moved to Camera (on by default); *Power-saving camera
+  features* and *Hold focus once it has settled* are gone (the automatic focus hold is off; Focus once does it by hand).
+- **Heat protection** is a switch under Power, on by default, with a confirmation before it goes off. Off and hot, a
+  distinct **HOT, no protection** warning (badge, Power alert, web page, log, chime) replaces the usual intervention.
+- **Viewer setup** drawer (phone and web page): the stream addresses with the login, NVR notes (Blue Iris, Frigate,
+  Synology: generic RTSP, TCP, login, keyframe), VLC, OBS, ffplay and the snapshot address, from the live addresses.
+- **Flashlight without the stream:** it works whenever the camera is open. With the stream stopped the preview is
+  started quietly to carry the LED and ended with it. Still 30 s, still locked by heat protection.
+- **Defaults:** the highest format the camera offers (4K30 on the Lumia 950) and 24 Mbps above 1080p (4 Mbps at or
+  below); the bitrate follows the resolution across the 1080p line. Existing installs take the new defaults once.
+- `/camera/state` adds `heatProtect`, `focusLocked`, `autoStart`, `udp`, `snapshot`, `audioOn`, `keyframeSec`,
+  `wifiIp`, `rtspViewersWifi`, `rtspViewersUsb`, `usbSeen`, `usbCable`, `preview`, `keepPreview` and `powerSave`;
+  `/config` gains `heatprotect`, `autostart` and `keyframe`; `focus=auto` also releases a hold or lock.
+
+The builds between 1.9.35 and 1.9.58 were the steps of this redesign; 1.9.59 is the one released.
+
+## Release 1.3 (build 1.9.34.0)
+
+**Preview and black screen, one rule set in all three apps** (`MainPage.Display.cs`, kept in step by Sync-Core):
+- **Preview on the phone** is a switch under *Camera*, **off by default**: no picture on the phone unless you ask for
+  it. On: the picture while stopped, and while streaming unless the screen is blacked out.
+- **Black screen while streaming** also stops the preview. New under *Power*: **Keep the preview running behind the
+  black screen** (off by default: it costs CPU and heat), so a tap on the black screen shows the picture at once;
+  heat protection forces it off and puts it back afterwards.
+- Adjusting the camera on the phone shows the picture for 60 s as before; **a tap on the dark preview area** does the
+  same as *Show camera picture*. A preview that disagrees with the black screen is fixed with one restart (automatic
+  ones at most once a minute), and nothing else touches the screen or the preview any more, so the screen can no
+  longer go black with the preview still running.
+- The manual focus / exposure / white balance sliders are always on screen, greyed while automatic, and enable at once.
+- The web page and `/config` gain `preview=on|off` and `keeppreview=on|off`.
+
+Feature parity with W10MWebCam and W10MDashcam: what one app of the family did better now exists in all three where it
+applies. The stream, the login and the RTSP transport are unchanged.
+
+**What you notice**
+- **The battery tile turns red when the battery is draining although the phone says "Charging"** (a PC USB port with
+  4K), judged every second from the power reading: Charging and the 5-minute average below −0.3 W. Before, the level
+  had to drop 2 % over 20 minutes. The amber **charger-insufficient notice** with the watts is new under the status card,
+  on the web page and in `/status` (`chargerNotice`); the web page's battery bar turns red too.
+- **Temp badge in three levels:** *Paused* (amber) the moment charging pauses, *Hot* (red) after 20 s, *Protect* (red)
+  while heat protection is on. Before, a one-second pause flashed the badge red. The heat texts now read as in the
+  other apps ("Heat protection: ..." and the usual cause, a charger that can't keep up).
+- **A chime and a vibration** when heat protection sets in, and a short one when charging resumes.
+- **Service pills under the start button:** RTSP over Wi-Fi (address and viewers), RTSP over USB, and the web page,
+  green while streaming and grey when stopped; a tap opens *Network and login*. The button says *Start RTSP stream*.
+- **Web page, log page and stats page switches** under *Network and login*: the web page is on by default (it is the way
+  to set the camera up without a cable), the log page (`/log`) and the new **stats page** (`/stats`, the last 12 hours
+  of frame rate, bitrate, latency, viewers, battery, power, CPU, memory, Wi-Fi and heat as graphs, a sample every 30 s
+  while on) are off until switched on, on the phone or on the settings page. The settings page is now served at `/` as
+  well; the log moved to `/log`. A page that is off answers 403.
+- **View only without the login:** the settings page, `/camera/state`, `/status`, the log and the stats can be read on
+  the home network without logging in; changes, the snapshot and `/login` need the login (the browser asks). The page
+  shows a *View only* notice with a *Log in* button.
+- **Changing the login needs the current password** (new *Current password* box, `current=` over USB), as in W10MDashcam.
+- The phone's **addresses follow network changes** (a new DHCP lease, another Wi-Fi network).
+- **Return to normal mode** button on the phone while the app is in safe mode (the MP4 engine after a crash or two
+  stalls); before, only the web page could do that.
+- The camera and power-saving options are toggle switches, as in the other apps.
+
+**Under the hood**
+- `/status` also carries W10MWebCam's field names (`uptime`, `battery`, `charging`, `onExternalPower`, `latencyMs`,
+  `wifiBars`, `cpuPhone`, `cpuApp`, `heat`, `heatBadge`, `heatLevel`, `protect`, `alert`, `blackout`, `previewing`,
+  `torchOn`, `webOn`, `logOn`, `statsOn`, ...); the older names stay. `charging` means current flows in (Charging), the
+  new `onExternalPower` means a charger is connected (Charging or Idle).
+- Changes (`/camera/set`, `/config`) are read from the request body only, never from the URL.
+- The web page reloads itself after an app update.
+- Three previous sessions' logs are kept (`log-previous.txt`, `-2`, `-3`), each headed CRASHED, closed normally or
+  ended abruptly; a clean close writes "App suspended" so the difference can be told.
+- `tools\Soak-Monitor.ps1` is the same script in all three repositories (reads `/status` without a login, collects the
+  phone log every 5 minutes while the log page is on); `tools\Make-Release.ps1` packs the release zip and SHA256SUMS.
+- New partials `MainPage.Power.cs` and `MainPage.Servers.cs`, as in W10MDashcam; the project references the Windows
+  Mobile Extensions for the vibration API.
+
 ## Release 1.2 (build 1.9.31.0)
 
 **What you notice**

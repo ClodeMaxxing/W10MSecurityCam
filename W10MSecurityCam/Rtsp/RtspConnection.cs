@@ -109,6 +109,8 @@ namespace W10MSecurityCam.Rtsp
         }
 
         public bool IsPlaying => _playing && !_closed;
+        /// <summary>The client came over the USB cable (Microsoft's IP-over-USB shows up as 127.0.0.1).</summary>
+        public bool FromUsb => _ip == "127.0.0.1";
 
         private void Log(string m) => _server.Log("RTSP " + _who + ": " + m);
 
