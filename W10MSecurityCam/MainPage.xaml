@@ -64,6 +64,43 @@
             <Setter Property="Padding" Value="9,5,9,7" />
             <Setter Property="Margin" Value="0,0,0,4" />
         </Style>
+        <!-- Dropdowns in the theme: green text on the tile, and the list that opens as a dark green card (the theme brushes
+             below are what the ComboBox template looks up). -->
+        <SolidColorBrush x:Key="ComboBoxBackground" Color="#0A160D" />
+        <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver" Color="#0E2014" />
+        <SolidColorBrush x:Key="ComboBoxBackgroundPressed" Color="#0E2014" />
+        <SolidColorBrush x:Key="ComboBoxForeground" Color="#CFFFD2" />
+        <SolidColorBrush x:Key="ComboBoxForegroundPointerOver" Color="#CFFFD2" />
+        <SolidColorBrush x:Key="ComboBoxForegroundPressed" Color="#CFFFD2" />
+        <SolidColorBrush x:Key="ComboBoxBorderBrush" Color="Transparent" />
+        <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="Transparent" />
+        <SolidColorBrush x:Key="ComboBoxBorderBrushPressed" Color="Transparent" />
+        <SolidColorBrush x:Key="ComboBoxDropDownGlyphForeground" Color="#3FBF5F" />
+        <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="#071109" />
+        <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush" Color="#39FF14" />
+        <SolidColorBrush x:Key="ComboBoxDropDownForeground" Color="#9CC3A2" />
+        <SolidColorBrush x:Key="ComboBoxItemForeground" Color="#9CC3A2" />
+        <SolidColorBrush x:Key="ComboBoxItemForegroundPointerOver" Color="#CFFFD2" />
+        <SolidColorBrush x:Key="ComboBoxItemForegroundPressed" Color="#CFFFD2" />
+        <SolidColorBrush x:Key="ComboBoxItemForegroundSelected" Color="#CFFFD2" />
+        <SolidColorBrush x:Key="ComboBoxItemForegroundSelectedPointerOver" Color="#CFFFD2" />
+        <SolidColorBrush x:Key="ComboBoxItemForegroundSelectedPressed" Color="#CFFFD2" />
+        <SolidColorBrush x:Key="ComboBoxItemBackgroundPointerOver" Color="#0E2014" />
+        <SolidColorBrush x:Key="ComboBoxItemBackgroundPressed" Color="#163A1E" />
+        <SolidColorBrush x:Key="ComboBoxItemBackgroundSelected" Color="#163A1E" />
+        <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPointerOver" Color="#1A4424" />
+        <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPressed" Color="#1A4424" />
+        <Style x:Key="ThemedCombo" TargetType="ComboBox">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="FontFamily" Value="Consolas" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Foreground" Value="#CFFFD2" />
+            <Setter Property="Background" Value="#0A160D" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0,2,0,2" />
+            <Setter Property="MinHeight" Value="28" />
+            <Setter Property="Margin" Value="0,1,0,0" />
+        </Style>
         <Style x:Key="FieldLabel" TargetType="TextBlock">
             <Setter Property="FontSize" Value="9" />
             <Setter Property="FontWeight" Value="SemiBold" />
@@ -499,14 +536,14 @@
                         </Border>
                         <StackPanel x:Name="VideoPanel" Visibility="Collapsed" Margin="8,6,8,4">
                             <TextBlock x:Name="VideoAlert" Text="Heat protection: 1080p / 6 Mbps" Foreground="#FF5555" FontWeight="Bold" FontSize="12" TextWrapping="Wrap" Visibility="Collapsed" Margin="0,2,0,4" />
-                            <Border Style="{StaticResource Field}"><ComboBox x:Name="ResolutionBox" Header="Resolution" SelectionChanged="Setting_Changed" HorizontalAlignment="Stretch" /></Border>
-                            <Border Style="{StaticResource Field}"><ComboBox x:Name="BitrateBox" Header="Bitrate" SelectionChanged="Setting_Changed" HorizontalAlignment="Stretch" /></Border>
+                            <Border Style="{StaticResource Field}"><StackPanel><TextBlock Text="RESOLUTION" Style="{StaticResource FieldLabel}" /><ComboBox x:Name="ResolutionBox" Style="{StaticResource ThemedCombo}" SelectionChanged="Setting_Changed" /></StackPanel></Border>
+                            <Border Style="{StaticResource Field}"><StackPanel><TextBlock Text="BITRATE" Style="{StaticResource FieldLabel}" /><ComboBox x:Name="BitrateBox" Style="{StaticResource ThemedCombo}" SelectionChanged="Setting_Changed" /></StackPanel></Border>
                             <Grid>
                                 <ToggleSwitch x:Name="HighBwToggle" Style="{StaticResource RowSwitch}" Margin="0,0,26,4" Header="High bandwidth (over 24 Mbps)" IsOn="False" Toggled="HighBwToggle_Toggled" />
                                 <Button Style="{StaticResource InfoButton}" VerticalAlignment="Center"><Button.Flyout><Flyout><TextBlock Style="{StaticResource InfoText}"
                                     Text="Unlocks bitrates up to 60 Mbps. Needs 5 GHz Wi-Fi or USB; 2.4 GHz drops frames." /></Flyout></Button.Flyout></Button>
                             </Grid>
-                            <Border Style="{StaticResource Field}"><ComboBox x:Name="KeyframeBox" Header="Keyframe every" SelectionChanged="Setting_Changed" HorizontalAlignment="Stretch" /></Border>
+                            <Border Style="{StaticResource Field}"><StackPanel><TextBlock Text="KEYFRAME EVERY" Style="{StaticResource FieldLabel}" /><ComboBox x:Name="KeyframeBox" Style="{StaticResource ThemedCombo}" SelectionChanged="Setting_Changed" /></StackPanel></Border>
                             <ToggleSwitch x:Name="AudioToggle" Style="{StaticResource RowSwitch}" Header="Microphone audio (AAC)" IsOn="False" Toggled="AudioToggle_Toggled" />
                         </StackPanel>
                     </StackPanel>
@@ -520,7 +557,16 @@
                         </Border>
                         <StackPanel x:Name="CameraPanel" Visibility="Collapsed" Margin="8,6,8,4">
                             <ToggleSwitch x:Name="AutoCameraCheck" Style="{StaticResource RowSwitch}" Header="Automatic focus, exposure and white balance" IsOn="True" Toggled="AutoCameraCheck_Changed" />
-                            <Button x:Name="FocusOnceButton" Content="Focus once and lock" Click="FocusOnceButton_Click" HorizontalAlignment="Stretch" Margin="0,0,0,4" />
+                            <!-- Focus once and lock as a row: off = press to autofocus once and lock there; on (LOCKED, or HELD by the
+                                 power-saving hold) = press to release back to continuous autofocus (UpdateFocusOnceRow). -->
+                            <Button x:Name="FocusOnceButton" Style="{StaticResource BarButton}" Background="#0A160D" BorderBrush="#142A1A" Height="40" Margin="0,0,0,4" Padding="0,0,9,0" Click="FocusOnceButton_Click">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <Border x:Name="FocusOnceBar" Style="{StaticResource BarLight}" Margin="0,7,10,7" />
+                                    <TextBlock Grid.Column="1" Text="Focus once and lock" FontSize="12" Foreground="#D8F5DC" VerticalAlignment="Center" />
+                                    <TextBlock x:Name="FocusOnceStateText" Grid.Column="2" Text="OFF" Style="{StaticResource BarState}" Margin="8,0,0,0" />
+                                </Grid>
+                            </Button>
                             <TextBlock x:Name="TuningStateText" Text="" FontSize="11" Foreground="#B9CFBD" TextWrapping="Wrap" Margin="0,0,0,4" />
                             <!-- Each setting is a tile: its value as the label, Auto / Manual on the right, the slider below (greyed
                                  out while that setting is automatic). As in W10MDashcam / W10MWebCam. -->

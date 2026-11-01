@@ -73,8 +73,10 @@ a{color:#9cf0b0}
 .fld{border:1px solid #142a1a;border-radius:6px;background:#0a160d;padding:6px 9px 7px;margin:0 0 4px}
 .fld b{display:block;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#6f8f77;font-weight:600}
 .fld code{display:block;font-family:Consolas,'Cascadia Mono',monospace;font-size:12px;color:#cfffd2;margin-top:3px;word-break:break-all;user-select:all}
-select{background:#0a160d;color:#fff;border:0;padding:4px 0;font-size:13px;font-family:Consolas,'Cascadia Mono',monospace;width:100%;margin-top:2px}
+select{background:#0a160d;color:#cfffd2;border:0;padding:4px 0;font-size:13px;font-family:Consolas,'Cascadia Mono',monospace;width:100%;margin-top:2px;cursor:pointer}
+select option{background:#071109;color:#9cc3a2;padding:6px}select option:checked{background:#163a1e;color:#cfffd2}
 select:disabled{opacity:.5}
+.fld:focus-within{border-color:#39ff14}
 .sl .t{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#d8f5dc}
 .sl .t em{font-style:normal;font-family:Consolas,'Cascadia Mono',monospace;color:#fff;margin-left:6px}
 .seg{display:inline-flex;border:1px solid #1f3a26;border-radius:10px;overflow:hidden;font-size:10px;cursor:pointer}
@@ -128,7 +130,7 @@ button:hover:not(:disabled){background:#18452b}button:disabled{opacity:.35}
 
 <div class='dr'><div class='dh' data-f='camera'>CAMERA<i>&#x25B8;</i></div><div class='db' id='camera'>
  <div class='sw' id='all'><span class='n'>Automatic focus, exposure and white balance</span><span class='s'>ON</span></div>
- <button id='fo'>Focus once and lock</button>
+ <div class='sw' id='fo'><span class='n'>Focus once and lock<i class='tip' data-tip='Off: autofocus once and lock the lens there. On (locked, or held by the power-saving hold): press to go back to continuous autofocus.'>i</i></span><span class='s'>OFF</span></div>
  <div class='fld sl' id='fsl' style='margin-top:4px'><div class='t'><span>Focus<em id='fv'></em></span><span class='seg' id='fseg'><span>Auto</span><span>Manual</span></span></div><input type='range' id='fs' min='0' max='100' step='1'></div>
  <div class='fld sl' id='esl'><div class='t'><span>Exposure<em id='ev'></em></span><span class='seg' id='eseg'><span>Auto</span><span>Manual</span></span></div><input type='range' id='es' min='0' max='100' step='0.5'></div>
  <div class='fld sl' id='wsl'><div class='t'><span>White balance<em id='wv'></em></span><span class='seg' id='wseg'><span>Auto</span><span>Manual</span></span></div><input type='range' id='ws' min='2000' max='8000' step='100'></div>
@@ -237,7 +239,8 @@ function render(){
  $('fsel').disabled=$('bsel').disabled=$('ksel').disabled=!w||p;
  sw('hb',st.highBw,!w||p);sw('au',st.audioOn,!w);
  // camera
- sw('all',st.focusAuto&&st.exposureAuto&&st.wbAuto,!w);$('fo').disabled=!w;
+ sw('all',st.focusAuto&&st.exposureAuto&&st.wbAuto,!w);
+ var fon=st.focusHeld||st.focusLocked;sw('fo',fon,!w,st.focusHeld?'ON · HELD':fon?'ON · LOCKED':'OFF');
  seg('fseg',st.focusAuto);seg('eseg',st.exposureAuto);seg('wseg',st.wbAuto);
  $('fsl').className='fld sl'+(st.focusAuto?' off':'');$('esl').className='fld sl'+(st.exposureAuto?' off':'');$('wsl').className='fld sl'+(st.wbAuto?' off':'');
  $('fs').value=st.focus;$('es').value=Math.max(0,Math.min(100,e2s(st.exposureMs)));$('ws').min=st.wbMin;$('ws').max=st.wbMax;$('ws').value=st.wb;
@@ -256,7 +259,7 @@ function render(){
  $('now').textContent=(st.mode||'')+' - '+(st.now||'');
 }
 function labels(){
- $('fv').textContent=st.focusAuto?'auto':Math.round($('fs').value)+' (0 near - 100 far)';
+ $('fv').textContent=st.focusHeld?'held (auto, lens parked)':st.focusAuto?'auto':Math.round($('fs').value)+(st.focusLocked?' (locked)':' (0 near - 100 far)');
  var ms=s2e($('es').value);$('ev').textContent=st.exposureAuto?'auto':ms.toFixed(ms<10?2:1)+' ms (1/'+Math.round(1000/ms)+' s)';
  $('wv').textContent=st.wbAuto?'auto':$('ws').value+' K';
 }
@@ -280,7 +283,7 @@ $('bpv').onclick=function(){var on=st&&(st.previewing||st.preview||st.keepPrevie
 $('bss').onclick=function(){send('powersave='+(st&&st.powerSave?'off':'on'))};
 $('btt').onclick=function(){send('torch='+(st&&st.torchOn?'off':'on'))};
 $('eng').onclick=function(){send('engine=normal')};
-$('fo').onclick=function(){$('msg').textContent='Focusing...';send('focus=once')};
+$('fo').onclick=function(e){if(e.target.className==='tip')return;if(st&&(st.focusHeld||st.focusLocked)){send('focus=auto')}else{$('msg').textContent='Focusing...';send('focus=once')}};
 $('all').onclick=function(){var a=st.focusAuto&&st.exposureAuto&&st.wbAuto;send('camera='+(a?'manual':'auto'))};
 $('fseg').onclick=function(){send('focus='+(st.focusAuto?'manual':'auto'))};
 $('eseg').onclick=function(){send('exposure='+(st.exposureAuto?'manual':'auto'))};

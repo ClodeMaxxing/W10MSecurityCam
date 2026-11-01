@@ -211,20 +211,19 @@ namespace W10MSecurityCam
                 Log("Formats: " + string.Join(", ", formats.Select(f => f.ToString().Replace(" fps", ""))));
                 _formatList = string.Join(", ", formats.Select(FormatKey));
 
-                // Security-camera defaults (v1.2+): 1080p at the lowest offered rate of 15 fps or more, 4 Mbps, keyframe every 2 s.
-                // Settings saved by older versions used different lists, so they are reset once.
-                if (!(_settings.Values["DefaultsVersion"] is int dv) || dv < 2)
+                // Security-camera defaults (v1.3+): the highest resolution the camera offers, 24 Mbps above 1080p (4 Mbps at
+                // 1080p or below), keyframe every 2 s. Settings saved by older versions are reset once.
+                if (!(_settings.Values["DefaultsVersion"] is int dv) || dv < 3)
                 {
                     _settings.Values.Remove("Format");
                     _settings.Values.Remove("Bitrate");
+                    _settings.Values.Remove("BitrateBps");
                     _settings.Values.Remove("Keyframe");
-                    _settings.Values["DefaultsVersion"] = 2;
-                    Log("Applied security-camera defaults (1080p, 4 Mbps, keyframe every 2 s)");
+                    _settings.Values["DefaultsVersion"] = 3;
+                    Log("Applied security-camera defaults (highest resolution, 24 Mbps above 1080p, keyframe every 2 s)");
                 }
                 string savedFormat = _settings.Values["Format"] as string;
-                ResolutionBox.SelectedItem = formats.FirstOrDefault(f => f.ToString() == savedFormat)
-                    ?? formats.Where(f => f.Width == 1920 && f.Height == 1080 && f.Fps >= 14.5).OrderBy(f => f.Fps).FirstOrDefault()
-                    ?? formats.FirstOrDefault();
+                ResolutionBox.SelectedItem = formats.FirstOrDefault(f => f.ToString() == savedFormat) ?? formats.FirstOrDefault();
                 if (_settings.Values["BitrateBps"] is int savedBps && savedBps >= 0)
                 {
                     _applyingSettings = true; // restoring, not a user change
@@ -235,6 +234,12 @@ namespace W10MSecurityCam
                 {
                     BitrateBox.SelectedIndex = savedBitrate; // a list index, saved by versions before BitrateBps
                     _settings.Values["BitrateBps"] = (int)((BitrateBox.SelectedItem as BitrateOption)?.Bps ?? 0);
+                }
+                else
+                {
+                    _applyingSettings = true;
+                    SelectBitrate(DefaultBitrateMbps(ResolutionBox.SelectedItem as FormatOption));
+                    _applyingSettings = false;
                 }
                 _settings.Values.Remove("Bitrate");
                 if (_settings.Values["Keyframe"] is int kf && kf >= 0 && kf < KeyframeBox.Items.Count)
@@ -348,8 +353,24 @@ namespace W10MSecurityCam
 
         private async void StartButton_Click(object sender, RoutedEventArgs e) => await ToggleStreamingAsync();
 
+        /// <summary>The bitrate a resolution gets by default: 24 Mbps above 1080p, 4 Mbps at 1080p or below.</summary>
+        private static uint DefaultBitrateMbps(FormatOption f) => f != null && f.Height > 1080 ? 24u : 4u;
+
+        private void SelectBitrate(uint mbps)
+        {
+            foreach (var item in BitrateBox.Items)
+                if (item is BitrateOption b && b.Bps == mbps * 1000000u) { BitrateBox.SelectedItem = b; return; }
+        }
+
         private async void Setting_Changed(object sender, SelectionChangedEventArgs e)
         {
+            if (!_applyingSettings && sender == ResolutionBox && ResolutionBox.SelectedItem is FormatOption nf && BitrateBox.SelectedItem is BitrateOption cb && cb.Bps != 0)
+            {
+                // a resolution above 1080p gets 24 Mbps unless more was chosen; back at 1080p or below, 24 goes back to 4
+                uint want = DefaultBitrateMbps(nf);
+                bool change = nf.Height > 1080 ? cb.Bps < want * 1000000u : cb.Bps == 24000000u;
+                if (change) { _applyingSettings = true; SelectBitrate(want); _applyingSettings = false; Log("Bitrate set to " + want + " Mbps for " + FormatKey(nf)); }
+            }
             if (!_applyingSettings) SyncVideoKeys();
             if (_applyingSettings) return; // a USB config change restarts the stream once, itself
             if (_camera == null || !_camera.IsStreaming || _busy) return;
@@ -1032,12 +1053,15 @@ namespace W10MSecurityCam
                 UpdateTuningLabels();
             }
             finally { _loadingTuningUi = false; }
+            UpdateFocusOnceRow();
         }
 
         private void UpdateTuningLabels()
         {
             FocusLabel.Text = !_tuning.FocusSupported ? "Focus: not adjustable"
-                : _tuning.FocusAuto ? "Focus: automatic" : "Focus: " + Math.Round(_tuning.FocusPercent) + " (0 near - 100 far)";
+                : _tuning.FocusHeld ? "Focus: held (automatic, lens parked)"
+                : _tuning.FocusAuto ? "Focus: automatic"
+                : "Focus: " + Math.Round(_tuning.FocusPercent) + (_focusLockedByOnce ? " (locked)" : " (0 near - 100 far)");
             ExposureLabel.Text = !_tuning.ExposureSupported ? "Exposure: not adjustable"
                 : _tuning.ExposureAuto ? "Exposure: automatic"
                 : string.Format("Exposure: {0:0.##} ms (1/{1:0} s)", _tuning.ExposureMs, 1000.0 / Math.Max(0.001, _tuning.ExposureMs));
@@ -1066,7 +1090,38 @@ namespace W10MSecurityCam
             TuningChangedFromUi(); // all three on Auto ticks the main box and hides the panel
         }
 
-        private async void FocusOnceButton_Click(object sender, RoutedEventArgs e) { TouchPhoneAdjust(); await FocusOnceAsync(); }
+        /// <summary>The Focus once row: off = autofocus once and lock there; on (locked, or held by the power-saving hold) = release to continuous autofocus.</summary>
+        private async void FocusOnceButton_Click(object sender, RoutedEventArgs e)
+        {
+            TouchPhoneAdjust();
+            if (FocusOnceOn) { await ReleaseFocusAsync(); return; }
+            await FocusOnceAsync();
+        }
+
+        private bool _focusLockedByOnce; // the lock came from Focus once (a manual focus the person set by hand is not "locked")
+        private bool FocusOnceOn => _tuning.FocusSupported && (_tuning.FocusHeld || (!_tuning.FocusAuto && _focusLockedByOnce));
+
+        private void UpdateFocusOnceRow()
+        {
+            if (FocusOnceBar == null) return;
+            bool on = FocusOnceOn;
+            FocusOnceButton.IsEnabled = _tuning.FocusSupported && _camera != null;
+            FocusOnceBar.Background = on ? GreenFill : Brush(0x16, 0x30, 0x1E);
+            FocusOnceStateText.Foreground = on ? GreenFill : Brush(0x7F, 0xAE, 0x86);
+            FocusOnceStateText.Text = !_tuning.FocusSupported ? "NOT ADJUSTABLE" : _tuning.FocusHeld ? "ON · HELD" : on ? "ON · LOCKED" : "OFF";
+        }
+
+        /// <summary>Back to continuous autofocus (after a lock or a hold).</summary>
+        private async Task ReleaseFocusAsync()
+        {
+            _focusLockedByOnce = false;
+            _tuning.ReleaseFocusHold();
+            _tuning.FocusAuto = true;
+            SaveTuning();
+            LoadTuningUi();
+            Log("Focus released: continuous autofocus again");
+            await ApplyTuningAsync();
+        }
 
         /// <summary>Autofocus once, then hold that focus (manual at the found position).</summary>
         private async Task FocusOnceAsync()
@@ -1076,19 +1131,22 @@ namespace W10MSecurityCam
             _settings.Values["TuningInProgress"] = true;
             try
             {
-                await _tuning.FocusOnceAsync(_camera.Capture);
+                _tuning.ReleaseFocusHold();
+                bool ok = await _tuning.FocusOnceAsync(_camera.Capture);
+                _focusLockedByOnce = ok;
                 _settings.Values["TuningInProgress"] = false;
                 SaveTuning();
                 LoadTuningUi();
                 await ApplyDisplayAsync();
                 await ApplyTuningAsync();
             }
-            finally { FocusOnceButton.IsEnabled = true; }
+            finally { FocusOnceButton.IsEnabled = true; UpdateFocusOnceRow(); }
         }
 
         private void TuningChangedFromUi()
         {
             TouchPhoneAdjust();
+            _focusLockedByOnce = false; // a focus set by hand is not the Focus once lock
             LoadTuningUi();
             SaveTuning();
             var _ = ApplyDisplayAsync();
@@ -1526,6 +1584,7 @@ namespace W10MSecurityCam
             o["torchOn"] = JsonValue.CreateBooleanValue(_torchWanted);
             o["torchLeftSec"] = JsonValue.CreateNumberValue(_torchWanted ? Math.Max(0, Math.Ceiling((_torchOffAt - DateTime.Now).TotalSeconds)) : 0);
             o["focusHeld"] = JsonValue.CreateBooleanValue(_tuning.FocusHeld);
+            o["focusLocked"] = JsonValue.CreateBooleanValue(!_tuning.FocusAuto && _focusLockedByOnce);
             o["wb"] = JsonValue.CreateNumberValue(_tuning.WhiteBalanceKelvin);
             o["wbMin"] = JsonValue.CreateNumberValue(_tuning.WbMin > 0 ? _tuning.WbMin : 2000);
             o["wbMax"] = JsonValue.CreateNumberValue(_tuning.WbMax > _tuning.WbMin ? _tuning.WbMax : 8000);
@@ -1914,7 +1973,7 @@ namespace W10MSecurityCam
             // Each of these takes "auto" or a value; a value makes just that setting manual.
             if (form.TryGetValue("focus", out var fo))
             {
-                if (fo.Trim().Equals("auto", StringComparison.OrdinalIgnoreCase)) { _tuning.FocusAuto = true; tuningChanged = true; }
+                if (fo.Trim().Equals("auto", StringComparison.OrdinalIgnoreCase)) { _tuning.FocusAuto = true; _tuning.ReleaseFocusHold(); _focusLockedByOnce = false; tuningChanged = true; }
                 else if (fo.Trim().Equals("manual", StringComparison.OrdinalIgnoreCase))
                 { if (_tuning.FocusAuto) _tuning.SeedFromCamera(_camera?.Capture, true, false, false); _tuning.FocusAuto = false; tuningChanged = true; }
                 else if (double.TryParse(fo, System.Globalization.NumberStyles.Float, inv, out var fv))
