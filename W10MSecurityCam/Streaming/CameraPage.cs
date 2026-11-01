@@ -146,7 +146,7 @@ function render(){
  var tile=function(l,v,w,g,tip){return ""<div class='tile""+(w?' warn':'')+""'""+(tip?"" data-tip='""+esc(tip)+""'"":'')+'><b>'+esc(l)+'</b>'+(v===''?'':'<span>'+esc(v)+'</span>')+(g||'')+'</div>'};
  var badge=function(t,c){return ""<div class='badge ""+(c||'')+""'>""+esc(t)+'</div>'};
  var meter=function(p,cls){p=Math.max(0,Math.min(100,p||0));return ""<div class='meter ""+(cls||'')+""'><div style='width:""+p+""%'></div></div>""};
- var bp=st.battery==null?0:st.battery,bcls=bp<20?'low':bp<40?'mid':'';
+ var bp=st.battery==null?0:st.battery,bcls=st.batteryFalling||bp<20?'low':bp<40?'mid':'';
  var batt=""<div class='batt'>""+meter(bp,bcls)+""<span class='cap'></span></div>"";
  var wb=st.wifiBars==null?0:st.wifiBars,bars=""<div class='bars""+(wb<2?' weak':'')+""'>"";
  for(var k=1;k<=4;k++)bars+=""<i class='""+(k<=wb?'on':'')+""' style='height:""+(2+k*3)+""px'></i>"";bars+='</div>';
