@@ -128,10 +128,10 @@
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
         </Style>
         <DataTemplate x:Key="PickRow">
-            <Grid Background="{Binding Back}" MinHeight="38">
+            <Grid Background="{Binding Back, FallbackValue=#071109}" MinHeight="38">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                <Border Width="3" Background="{Binding Light}" CornerRadius="0,2,2,0" Margin="0,9,12,9" />
-                <TextBlock Grid.Column="1" Text="{Binding Text}" Foreground="{Binding Fore}" FontFamily="Consolas" FontSize="13" VerticalAlignment="Center" Margin="0,0,14,0" />
+                <Border Width="3" Background="{Binding Light, FallbackValue=#071109}" CornerRadius="0,2,2,0" Margin="0,9,12,9" />
+                <TextBlock Grid.Column="1" Text="{Binding Text}" Foreground="{Binding Fore, FallbackValue=#CFFFD2}" FontFamily="Consolas" FontSize="13" VerticalAlignment="Center" Margin="0,0,14,0" />
             </Grid>
         </DataTemplate>
         <!-- The Auto / Manual segment on a camera tile (the code colours the active half). -->

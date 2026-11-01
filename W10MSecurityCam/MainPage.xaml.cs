@@ -1095,11 +1095,7 @@ namespace W10MSecurityCam
         }
 
         // ---- the pickers: a tile opens a themed list of the hidden ComboBox's items; a tap on a row selects it in the ComboBox.
-        private sealed class PickRowItem
-        {
-            public object Value; public string Text;
-            public Windows.UI.Xaml.Media.Brush Light, Fore, Back;
-        }
+        // (public with properties: {Binding} in the row template needs reflectable properties, also under .NET Native)
 
         private void Pick_Click(object sender, RoutedEventArgs e)
         {
@@ -2323,5 +2319,19 @@ namespace W10MSecurityCam
             }
             LogText.Text = text;
         }
+    }
+}
+
+namespace W10MSecurityCam
+{
+    /// <summary>One row of a picker list (Resolution, Bitrate, Keyframe): the item, its text and the row colours.</summary>
+    [Windows.UI.Xaml.Data.Bindable]
+    public sealed class PickRowItem
+    {
+        public object Value { get; set; }
+        public string Text { get; set; }
+        public Windows.UI.Xaml.Media.Brush Light { get; set; }
+        public Windows.UI.Xaml.Media.Brush Fore { get; set; }
+        public Windows.UI.Xaml.Media.Brush Back { get; set; }
     }
 }
