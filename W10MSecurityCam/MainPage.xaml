@@ -253,12 +253,12 @@
                         Margin="0,2,0,4" Click="NormalModeButton_Click" Background="#3A1010" Foreground="#FFD0D0" BorderBrush="#A03030" />
                 <!-- The picture and the screen saver, right under the status: Show camera picture (60 s) turns into Turn preview off
                      while a picture shows; the black-screen switch is the screen saver (MainPage.Display.cs). -->
-                <Button x:Name="ShowPictureButton" Content="Show camera picture (60 s)" HorizontalAlignment="Stretch"
+                <Button x:Name="ShowPictureButton" Content="Preview (60 s)" HorizontalAlignment="Stretch"
                         Margin="0,2,0,2" Click="ShowPictureButton_Click" />
                 <Grid Margin="0,0,0,4">
-                    <ToggleSwitch x:Name="PowerSaveToggle" Header="Black screen while streaming" IsOn="True" Toggled="PowerSaveToggle_Toggled" />
+                    <ToggleSwitch x:Name="PowerSaveToggle" Header="Screensaver" IsOn="True" Toggled="PowerSaveToggle_Toggled" />
                     <Button Style="{StaticResource InfoButton}"><Button.Flyout><Flyout><TextBlock Style="{StaticResource InfoText}"
-                        Text="The screen saver: black screen, lowest brightness, preview off. Tap the black screen for 15 s of status." /></Flyout></Button.Flyout></Button>
+                        Text="Black screen, lowest brightness, no preview while streaming. Tap the black screen for 15 s of status. On, it switches Preview on the phone off; Preview on switches it off." /></Flyout></Button.Flyout></Button>
                 </Grid>
 
                 <Button Style="{StaticResource FoldButton}" Tag="VideoPanel|VIDEO" Content="VIDEO  &#x25B8;" Click="Fold_Click" />
