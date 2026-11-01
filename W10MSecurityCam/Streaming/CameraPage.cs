@@ -137,6 +137,7 @@ button:hover:not(:disabled){background:#18452b}button:disabled{opacity:.35}
 
 <div class='dr'><div class='dh' data-f='camera'>CAMERA<i>&#x25B8;</i></div><div class='db' id='camera'>
  <div class='sw' id='all'><span class='n'>Automatic focus, exposure and white balance</span><span class='s'>ON</span></div>
+ <div class='sw' id='so'><span class='n' id='sol'>Image stabilization<i class='tip' data-tip='Off on a fixed mount saves processing and heat. Changing it restarts the stream once.'>i</i></span><span class='s'>ON</span></div>
  <div class='sw' id='fo'><span class='n'>Focus once and lock<i class='tip' data-tip='Off: autofocus once and lock the lens there. On (locked, or held by the power-saving hold): press to go back to continuous autofocus.'>i</i></span><span class='s'>OFF</span></div>
  <div class='fld sl' id='fsl' style='margin-top:4px'><div class='t'><b>Focus</b><span class='seg' id='fseg'><span>Auto</span><span>Manual</span></span></div><div class='val'><em id='fv'>-</em><small id='fn'></small></div><input type='range' id='fs' min='0' max='100' step='1'></div>
  <div class='fld sl' id='esl'><div class='t'><b>Exposure</b><span class='seg' id='eseg'><span>Auto</span><span>Manual</span></span></div><div class='val'><em id='ev'>-</em><small id='en'></small></div><input type='range' id='es' min='0' max='100' step='0.5'></div>
@@ -146,12 +147,7 @@ button:hover:not(:disabled){background:#18452b}button:disabled{opacity:.35}
 <div class='dr'><div class='dh' data-f='power'>POWER<i>&#x25B8;</i></div><div class='db' id='power'>
  <div class='sw' data-k='heatprotect' id='hp'><span class='n'>Heat protection<i class='tip' data-tip='When charging pauses on a good charger the phone is hot: 1080p / 6 Mbps, screensaver on, flashlight locked, until it charges normally again. Off: nothing is changed, and on a weak charger the battery drains and the phone dies.'>i</i></span><span class='s'>ON</span></div>
  <div class='bad' id='ta2' style='display:none'></div>
- <div class='sw' data-k='keeppreview' id='kp'><span class='n'>Keep the preview running behind the screensaver<i class='tip' data-tip='The preview runs behind the black screen, so a tap shows the picture at once. Costs CPU and heat; heat protection switches it off.'>i</i></span><span class='s'>OFF</span></div>
- <div class='sw' data-k='savepower' id='sall'><span class='n'>Power-saving camera features<i class='tip' data-tip='Stabilization off and focus held once it settles: less processing and heat on a fixed mount. Off: choose each one.'>i</i></span><span class='s'>ON</span></div>
- <div class='sub' id='spanel'>
-  <div class='sw' data-k='saveois' id='so'><span class='n' id='sol'>Stabilization off (fixed mount)</span><span class='s'>OFF</span></div>
-  <div class='sw' data-k='savefocus' id='sf'><span class='n'>Hold focus once it has settled</span><span class='s'>OFF</span></div>
- </div>
+ <div class='sw' data-k='keeppreview' id='kp'><span class='n'>Preview on always<i class='tip' data-tip='Off by default. On: the preview runs even behind the screensaver, so a tap shows the picture at once. Costs CPU and heat; heat protection switches it off.'>i</i></span><span class='s'>OFF</span></div>
 </div></div>
 
 <div class='dr'><div class='dh' data-f='net'>NETWORK AND LOGIN<i>&#x25B8;</i></div><div class='db' id='net'>
@@ -262,9 +258,8 @@ function render(){
  sw('hp',st.heatProtect,!w);
  var hot=!p&&!st.heatProtect&&st.heatLevel>=2;
  $('ta2').textContent=p?'Heat protection: power saving forced on':'HOT and heat protection is off: nothing is done about it - the battery drains on a weak charger';$('ta2').style.display=p||hot?'block':'none';
- sw('kp',st.keepPreview,!w||p);sw('sall',st.saveAll,!w||p);$('spanel').style.display=st.saveAll?'none':'block';
- sw('so',st.saveOis,!w||p||!st.oisSupported);sw('sf',st.saveFocus,!w||p);
- $('sol').textContent='Stabilization off (fixed mount)'+(st.oisSupported?'':' - not offered by this camera');
+ sw('kp',st.keepPreview,!w||p);
+ sw('so',!st.saveOis,!w||p||!st.oisSupported,!st.oisSupported?'NOT ON THIS CAMERA':!st.saveOis?'ON':'OFF');
  // network
  sw('lgo',st.logOn,!w);sw('sgo',st.statsOn,!w);sw('ast',st.autoStart,!w);sw('udp',st.udp,!w);sw('snap',st.snapshot,!w);
  if(!$('lu').value&&document.activeElement!==$('lu'))$('lu').value=st.user||'admin';$('lb').disabled=!w;
@@ -302,6 +297,7 @@ $('bpv').onclick=function(){var on=st&&(st.previewing||st.preview||st.keepPrevie
 $('bss').onclick=function(){send('powersave='+(st&&st.powerSave?'off':'on'))};
 $('btt').onclick=function(){send('torch='+(st&&st.torchOn?'off':'on'))};
 $('eng').onclick=function(){send('engine=normal')};
+$('so').onclick=function(e){if(e.target.className==='tip')return;send('saveois='+(st&&st.saveOis?'off':'on'))};
 $('fo').onclick=function(e){if(e.target.className==='tip')return;if(st&&(st.focusHeld||st.focusLocked)){send('focus=auto')}else{$('msg').textContent='Focusing...';send('focus=once')}};
 $('all').onclick=function(){var a=st.focusAuto&&st.exposureAuto&&st.wbAuto;send('camera='+(a?'manual':'auto'))};
 $('fseg').onclick=function(){send('focus='+(st.focusAuto?'manual':'auto'))};

@@ -171,8 +171,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleSwitch">
-                        <Border x:Name="RowRoot" Background="#0A160D" BorderBrush="#142A1A" BorderThickness="1" CornerRadius="6" MinHeight="40" Tapped="RowSwitch_Tapped">
-                            <Grid>
+                        <Grid x:Name="RowRoot" Tapped="RowSwitch_Tapped">
                                 <VisualStateManager.VisualStateGroups>
                                     <VisualStateGroup x:Name="CommonStates">
                                         <VisualState x:Name="Normal" />
@@ -200,13 +199,15 @@
                                         <VisualState x:Name="OnContent" />
                                     </VisualStateGroup>
                                 </VisualStateManager.VisualStateGroups>
+                            <Border Background="#0A160D" BorderBrush="#142A1A" BorderThickness="1" CornerRadius="6" MinHeight="40" />
+                            <Grid>
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                 <Border x:Name="RowLight" Width="4" CornerRadius="0,2,2,0" Background="#16301E" Margin="0,7,10,7" />
                                 <ContentPresenter x:Name="HeaderContentPresenter" Grid.Column="1" Content="{TemplateBinding Header}" Foreground="#D8F5DC" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,7,8,8" />
                                 <TextBlock x:Name="RowOff" Grid.Column="2" Text="OFF" FontFamily="Consolas" FontSize="11" Foreground="#7FAE86" VerticalAlignment="Center" Margin="0,0,9,0" />
                                 <TextBlock x:Name="RowOn" Grid.Column="2" Text="ON" FontFamily="Consolas" FontSize="11" Foreground="#39FF14" VerticalAlignment="Center" Margin="0,0,9,0" Visibility="Collapsed" />
                             </Grid>
-                        </Border>
+                        </Grid>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -637,6 +638,7 @@
                         </Border>
                         <StackPanel x:Name="CameraPanel" Visibility="Collapsed" Margin="8,6,8,4">
                             <ToggleSwitch x:Name="AutoCameraCheck" Style="{StaticResource RowSwitch}" Header="Automatic focus, exposure and white balance" IsOn="True" Toggled="AutoCameraCheck_Changed" />
+                            <ToggleSwitch x:Name="OisToggle" Style="{StaticResource RowSwitch}" Header="Image stabilization" IsOn="True" Toggled="OisToggle_Toggled" />
                             <!-- Focus once and lock as a row: off = press to autofocus once and lock there; on (LOCKED, or HELD by the
                                  power-saving hold) = press to release back to continuous autofocus (UpdateFocusOnceRow). -->
                             <Button x:Name="FocusOnceButton" Style="{StaticResource BarButton}" Background="#0A160D" BorderBrush="#142A1A" Height="40" Margin="0,0,0,4" Padding="0,0,9,0" Click="FocusOnceButton_Click">
@@ -721,18 +723,14 @@
                             </Grid>
                             <TextBlock x:Name="PowerAlert" Text="Heat protection: power saving forced on" Foreground="#FF5555" FontWeight="Bold" FontSize="12" TextWrapping="Wrap" Visibility="Collapsed" Margin="0,2,0,4" />
                             <Grid>
-                                <ToggleSwitch x:Name="KeepPreviewToggle" Style="{StaticResource RowSwitch}" Margin="0,0,26,4" Header="Keep the preview running behind the screensaver" Toggled="KeepPreviewToggle_Toggled" />
+                                <ToggleSwitch x:Name="KeepPreviewToggle" Style="{StaticResource RowSwitch}" Margin="0,0,26,4" Header="Preview on always" Toggled="KeepPreviewToggle_Toggled" />
                                 <Button Style="{StaticResource InfoButton}" VerticalAlignment="Center"><Button.Flyout><Flyout><TextBlock Style="{StaticResource InfoText}"
-                                    Text="The preview runs behind the black screen, so a tap shows the picture at once. Costs CPU and heat; heat protection switches it off." /></Flyout></Button.Flyout></Button>
+                                    Text="Off by default. On: the preview runs even behind the screensaver, so a tap shows the picture at once. Costs CPU and heat; heat protection switches it off." /></Flyout></Button.Flyout></Button>
                             </Grid>
-                            <Grid>
-                                <ToggleSwitch x:Name="SaveAllCheck" Style="{StaticResource RowSwitch}" Margin="0,0,26,4" Header="Power-saving camera features" IsOn="True" Toggled="SaveAll_Changed" />
-                                <Button Style="{StaticResource InfoButton}" VerticalAlignment="Center"><Button.Flyout><Flyout><TextBlock Style="{StaticResource InfoText}"
-                                    Text="Stabilization off and focus held once it settles: less processing and heat on a fixed mount. Off: choose each one." /></Flyout></Button.Flyout></Button>
-                            </Grid>
-                            <StackPanel x:Name="SavePanel" Visibility="Collapsed" Margin="12,0,0,0">
-                                <ToggleSwitch x:Name="SaveOisCheck" Style="{StaticResource RowSwitch}" Header="Stabilization off (fixed mount)" Toggled="SaveSub_Changed" />
-                                <ToggleSwitch x:Name="SaveFocusCheck" Style="{StaticResource RowSwitch}" Header="Hold focus once it has settled" Toggled="SaveSub_Changed" />
+                            <StackPanel x:Name="SavePanel" Visibility="Collapsed">
+                                <ToggleSwitch x:Name="SaveAllCheck" Toggled="SaveAll_Changed" />
+                                <ToggleSwitch x:Name="SaveOisCheck" Toggled="SaveSub_Changed" />
+                                <ToggleSwitch x:Name="SaveFocusCheck" Toggled="SaveSub_Changed" />
                             </StackPanel>
                         </StackPanel>
                     </StackPanel>

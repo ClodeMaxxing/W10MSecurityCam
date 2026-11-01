@@ -918,11 +918,12 @@ namespace W10MSecurityCam
             try
             {
                 SaveAllCheck.IsOn = _tuning.SaveAll;
-                SavePanel.Visibility = _tuning.SaveAll ? Visibility.Collapsed : Visibility.Visible;
                 SaveOisCheck.IsOn = _tuning.SaveOis;
                 SaveFocusCheck.IsOn = _tuning.SaveFocus;
                 // Not every camera offers every mode; say so instead of ticking something that does nothing.
                 SaveOisCheck.IsEnabled = _tuning.OisSupported || _camera == null;
+                // the visible switch (Camera): Image stabilization on = SaveOis (stabilization off) false
+                if (OisToggle != null) { OisToggle.IsOn = !_tuning.SaveOis; OisToggle.IsEnabled = SaveOisCheck.IsEnabled; }
             }
             finally { _loadingSaveUi = false; }
         }
@@ -931,6 +932,14 @@ namespace W10MSecurityCam
         {
             if (_loadingSaveUi) return;
             _tuning.SaveAll = SaveAllCheck.IsOn;
+            PowerChangedFromUi();
+        }
+
+        /// <summary>Image stabilization (Camera): off saves processing and heat on a fixed mount (one stream restart).</summary>
+        private void OisToggle_Toggled(object sender, RoutedEventArgs e)
+        {
+            if (_loadingSaveUi) return;
+            _tuning.SaveOis = !OisToggle.IsOn;
             PowerChangedFromUi();
         }
 
