@@ -416,7 +416,7 @@ namespace W10MSecurityCam
                     _tuning.FrameLimitMs = 1000.0 / Math.Max(1, f.Fps);
                     await Task.Delay(2500); // let the first frames flow before touching the camera controls again
                     await ApplyTuningAsync(true);
-                    StartButton.Content = "Stop RTSP stream";
+                    UpdateStreamButton(true);
                     await ApplyDisplayAsync();
                     if (!_keepAwake) { _displayRequest.RequestActive(); _keepAwake = true; }
                 }
@@ -450,7 +450,7 @@ namespace W10MSecurityCam
 
         private void StopUi()
         {
-            StartButton.Content = "Start RTSP stream";
+            UpdateStreamButton(false);
             if (_keepAwake) { _displayRequest.RequestRelease(); _keepAwake = false; }
         }
 

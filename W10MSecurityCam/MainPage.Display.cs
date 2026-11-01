@@ -44,7 +44,7 @@ namespace W10MSecurityCam
         private bool PreviewWanted =>
             _phoneAdjusting
             || (PreviewToggle.IsOn && !(StreamingNow && PowerSaveToggle.IsOn))
-            || (StreamingNow && PowerSaveToggle.IsOn && KeepPreviewToggle.IsOn && !_protect);
+            || (KeepPreviewToggle.IsOn && !_protect); // on: the preview runs, behind the screensaver or not, so a tap shows it at once
 
         /// <summary>From the settings load, before the camera starts (the switches' handlers must not act meanwhile).</summary>
         private void LoadDisplaySettings()
@@ -162,7 +162,7 @@ namespace W10MSecurityCam
             if (PreviewBar == null || ScreensaverBar == null) return; // the XAML still loads
             var lit = Brush(0x39, 0xFF, 0x14); var dark = Brush(0x16, 0x30, 0x1E);
             var litText = Brush(0x39, 0xFF, 0x14); var dimText = Brush(0x7F, 0xAE, 0x86);
-            bool on = previewing || _phoneAdjusting || PreviewToggle.IsOn;
+            bool on = previewing || _phoneAdjusting || PreviewToggle.IsOn || (KeepPreviewToggle.IsOn && !_protect);
             PreviewBar.Background = on ? lit : dark;
             PreviewStateText.Foreground = on ? litText : dimText;
             int left = _phoneAdjusting ? Math.Max(0, (int)Math.Ceiling((_adjustEnds - DateTime.Now).TotalSeconds)) : 0;
@@ -214,7 +214,7 @@ namespace W10MSecurityCam
         /// </summary>
         private async void PreviewButton_Click(object sender, RoutedEventArgs e)
         {
-            bool showing = (_camera != null && _camera.Previewing) || _phoneAdjusting || PreviewToggle.IsOn;
+            bool showing = (_camera != null && _camera.Previewing) || _phoneAdjusting || PreviewToggle.IsOn || KeepPreviewToggle.IsOn;
             if (showing) { await TurnPreviewOffAsync(); return; }
             if (StreamingNow && PowerSaveToggle.IsOn) { await TouchPhoneAdjustAsync(true); return; }
             PreviewToggle.IsOn = true; // its handler saves, switches the screensaver off and applies

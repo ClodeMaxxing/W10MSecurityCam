@@ -85,6 +85,28 @@
             <Setter Property="Background" Value="#16301E" />
             <Setter Property="Margin" Value="0,5,0,0" />
         </Style>
+        <!-- A group of service rows (RTSP, WEB UI) with a small label on top. -->
+        <Style x:Key="ServiceGroup" TargetType="Border">
+            <Setter Property="Background" Value="#07140B" />
+            <Setter Property="BorderBrush" Value="#1F3A26" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="6,4,6,2" />
+            <Setter Property="Margin" Value="0,0,0,4" />
+        </Style>
+        <Style x:Key="ServiceGroupLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="CharacterSpacing" Value="80" />
+            <Setter Property="Foreground" Value="#7FAE86" />
+            <Setter Property="Margin" Value="2,0,0,3" />
+        </Style>
+        <Style x:Key="PillLabel" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Consolas" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="#8FB596" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Width" Value="36" />
+        </Style>
         <Style x:Key="PillDot" TargetType="Ellipse">
             <Setter Property="Width" Value="7" />
             <Setter Property="Height" Value="7" />
@@ -139,43 +161,68 @@
                 </Grid>
 
                 <!-- MAIN: what is needed day to day. Everything else folds away below. -->
-                <Button x:Name="StartButton" Content="Start RTSP stream" HorizontalAlignment="Stretch"
-                        Margin="0,0,0,6" Click="StartButton_Click" IsEnabled="False" />
-                <!-- Service strip: the four ways in, full width. Green dot = reachable, grey = not; the note on the right says why
-                     (viewers, stopped, no USB). Tap opens Network and login. USB: the phone cannot see the cable as a link (IP over
-                     USB arrives as loopback), so USB is certain only once a PC has connected; see UpdateServicePills. -->
+                <!-- The stream button: a light-bar button like Preview and Screensaver, with a small recording light that is red
+                     while streaming (UpdateStreamButton). -->
+                <Button x:Name="StartButton" Style="{StaticResource BarButton}" Margin="0,0,0,6" Click="StartButton_Click" IsEnabled="False">
+                    <Grid>
+                        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                        <Ellipse x:Name="StreamLight" Width="9" Height="9" Margin="0,0,8,0" VerticalAlignment="Center" Fill="#3A1414" Stroke="#5A2020" StrokeThickness="1" />
+                        <TextBlock Grid.Column="1" Text="RTSP stream" Style="{StaticResource BarName}" />
+                        <TextBlock x:Name="StreamStateText" Grid.Column="2" Text="OFF" Style="{StaticResource BarState}" />
+                        <Border x:Name="StreamBar" Grid.Row="1" Grid.ColumnSpan="3" Style="{StaticResource BarLight}" />
+                    </Grid>
+                </Button>
+                <!-- Service strip: the four ways in, grouped RTSP / WEB UI, each row Wi-Fi or USB with its full address. Green dot =
+                     reachable, grey = not; the note on the right says why (viewers, stopped, no USB). Tap opens Network and login.
+                     USB: the phone cannot see the cable as a link (IP over USB arrives as loopback), so USB is certain only once a
+                     PC has connected; see UpdateServicePills. -->
                 <StackPanel x:Name="ServiceStrip" Margin="0,0,0,6">
-                    <Border x:Name="SvcWifi" Style="{StaticResource ServicePill}" Tapped="ServicePill_Tapped">
-                        <Grid>
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                            <Ellipse x:Name="SvcWifiDot" Style="{StaticResource PillDot}" />
-                            <TextBlock x:Name="SvcWifiText" Grid.Column="1" Style="{StaticResource PillText}" Text="RTSP  Wi-Fi" TextTrimming="CharacterEllipsis" />
-                            <TextBlock x:Name="SvcWifiNote" Grid.Column="2" Style="{StaticResource PillText}" Foreground="#7F9A86" Margin="6,0,0,0" Text="" />
-                        </Grid>
+                    <Border Style="{StaticResource ServiceGroup}">
+                        <StackPanel>
+                            <TextBlock Text="RTSP" Style="{StaticResource ServiceGroupLabel}" />
+                            <Border x:Name="SvcWifi" Style="{StaticResource ServicePill}" Tapped="ServicePill_Tapped">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <Ellipse x:Name="SvcWifiDot" Style="{StaticResource PillDot}" />
+                                    <TextBlock Grid.Column="1" Text="Wi-Fi" Style="{StaticResource PillLabel}" />
+                                    <TextBlock x:Name="SvcWifiText" Grid.Column="2" Style="{StaticResource PillText}" Text="" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock x:Name="SvcWifiNote" Grid.Column="3" Style="{StaticResource PillText}" Foreground="#7F9A86" Margin="6,0,0,0" Text="" />
+                                </Grid>
+                            </Border>
+                            <Border x:Name="SvcUsb" Style="{StaticResource ServicePill}" Tapped="ServicePill_Tapped">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <Ellipse x:Name="SvcUsbDot" Style="{StaticResource PillDot}" />
+                                    <TextBlock Grid.Column="1" Text="USB" Style="{StaticResource PillLabel}" />
+                                    <TextBlock x:Name="SvcUsbText" Grid.Column="2" Style="{StaticResource PillText}" Text="" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock x:Name="SvcUsbNote" Grid.Column="3" Style="{StaticResource PillText}" Foreground="#7F9A86" Margin="6,0,0,0" Text="" />
+                                </Grid>
+                            </Border>
+                        </StackPanel>
                     </Border>
-                    <Border x:Name="SvcUsb" Style="{StaticResource ServicePill}" Tapped="ServicePill_Tapped">
-                        <Grid>
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                            <Ellipse x:Name="SvcUsbDot" Style="{StaticResource PillDot}" />
-                            <TextBlock x:Name="SvcUsbText" Grid.Column="1" Style="{StaticResource PillText}" Text="RTSP  USB" TextTrimming="CharacterEllipsis" />
-                            <TextBlock x:Name="SvcUsbNote" Grid.Column="2" Style="{StaticResource PillText}" Foreground="#7F9A86" Margin="6,0,0,0" Text="" />
-                        </Grid>
-                    </Border>
-                    <Border x:Name="SvcWeb" Style="{StaticResource ServicePill}" Tapped="ServicePill_Tapped">
-                        <Grid>
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                            <Ellipse x:Name="SvcWebDot" Style="{StaticResource PillDot}" />
-                            <TextBlock x:Name="SvcWebText" Grid.Column="1" Style="{StaticResource PillText}" Text="Web UI  Wi-Fi" TextTrimming="CharacterEllipsis" />
-                            <TextBlock x:Name="SvcWebNote" Grid.Column="2" Style="{StaticResource PillText}" Foreground="#7F9A86" Margin="6,0,0,0" Text="" />
-                        </Grid>
-                    </Border>
-                    <Border x:Name="SvcWebUsb" Style="{StaticResource ServicePill}" Tapped="ServicePill_Tapped">
-                        <Grid>
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                            <Ellipse x:Name="SvcWebUsbDot" Style="{StaticResource PillDot}" />
-                            <TextBlock x:Name="SvcWebUsbText" Grid.Column="1" Style="{StaticResource PillText}" Text="Web UI  USB" TextTrimming="CharacterEllipsis" />
-                            <TextBlock x:Name="SvcWebUsbNote" Grid.Column="2" Style="{StaticResource PillText}" Foreground="#7F9A86" Margin="6,0,0,0" Text="" />
-                        </Grid>
+                    <Border Style="{StaticResource ServiceGroup}">
+                        <StackPanel>
+                            <TextBlock Text="WEB UI" Style="{StaticResource ServiceGroupLabel}" />
+                            <Border x:Name="SvcWeb" Style="{StaticResource ServicePill}" Tapped="ServicePill_Tapped">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <Ellipse x:Name="SvcWebDot" Style="{StaticResource PillDot}" />
+                                    <TextBlock Grid.Column="1" Text="Wi-Fi" Style="{StaticResource PillLabel}" />
+                                    <TextBlock x:Name="SvcWebText" Grid.Column="2" Style="{StaticResource PillText}" Text="" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock x:Name="SvcWebNote" Grid.Column="3" Style="{StaticResource PillText}" Foreground="#7F9A86" Margin="6,0,0,0" Text="" />
+                                </Grid>
+                            </Border>
+                            <Border x:Name="SvcWebUsb" Style="{StaticResource ServicePill}" Tapped="ServicePill_Tapped">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <Ellipse x:Name="SvcWebUsbDot" Style="{StaticResource PillDot}" />
+                                    <TextBlock Grid.Column="1" Text="USB" Style="{StaticResource PillLabel}" />
+                                    <TextBlock x:Name="SvcWebUsbText" Grid.Column="2" Style="{StaticResource PillText}" Text="" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock x:Name="SvcWebUsbNote" Grid.Column="3" Style="{StaticResource PillText}" Foreground="#7F9A86" Margin="6,0,0,0" Text="" />
+                                </Grid>
+                            </Border>
+                        </StackPanel>
                     </Border>
                 </StackPanel>
                 <!-- Status card: state dot and label, resolution and viewer pills, then the big numbers. -->

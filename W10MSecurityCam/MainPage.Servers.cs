@@ -121,23 +121,35 @@ namespace W10MSecurityCam
 
             SvcWifiDot.Fill = streaming && ip != null ? GreenFill : grey;
             SvcWifiText.Foreground = streaming && ip != null ? litText : dimText;
-            SvcWifiText.Text = "RTSP  Wi-Fi " + (ip != null ? "rtsp://" + ip + ":" + RtspPort + "/live" : "");
+            SvcWifiText.Text = ip != null ? "rtsp://" + ip + ":" + RtspPort + "/live" : "";
             SvcWifiNote.Text = ip == null ? "no Wi-Fi" : !streaming ? "stopped" : ViewerCountText(wifiViewers).TrimStart(' ', '·', ' ');
 
             SvcUsbDot.Fill = streaming ? usbDot : grey;
             SvcUsbText.Foreground = streaming && usbSeen ? litText : dimText;
-            SvcUsbText.Text = "RTSP  USB rtsp://127.0.0.1:" + UsbPort + "/live";
+            SvcUsbText.Text = "rtsp://127.0.0.1:" + UsbPort + "/live";
             SvcUsbNote.Text = !streaming ? "stopped" : usbViewers > 0 ? ViewerCountText(usbViewers).TrimStart(' ', '·', ' ') : usbNote;
 
             SvcWebDot.Fill = _webOn && ip != null ? GreenFill : grey;
             SvcWebText.Foreground = _webOn && ip != null ? litText : dimText;
-            SvcWebText.Text = "Web UI  Wi-Fi " + (ip != null ? "http://" + ip + ":" + LogPort : "");
+            SvcWebText.Text = ip != null ? "http://" + ip + ":" + LogPort : "";
             SvcWebNote.Text = !_webOn ? "off" : ip == null ? "no Wi-Fi" : "";
 
             SvcWebUsbDot.Fill = _webOn ? usbDot : grey;
             SvcWebUsbText.Foreground = _webOn && usbSeen ? litText : dimText;
-            SvcWebUsbText.Text = "Web UI  USB http://127.0.0.1:" + UsbPort;
+            SvcWebUsbText.Text = "http://127.0.0.1:" + UsbPort;
             SvcWebUsbNote.Text = !_webOn ? "off" : usbNote;
+            UpdateStreamButton(streaming);
+        }
+
+        /// <summary>The stream button's light, bar and state text: red while streaming, dark when stopped (once a second, and on start/stop).</summary>
+        private void UpdateStreamButton(bool streaming)
+        {
+            if (StreamLight == null) return;
+            StreamLight.Fill = streaming ? Brush(0xFF, 0x30, 0x30) : Brush(0x3A, 0x14, 0x14);
+            StreamLight.Stroke = streaming ? Brush(0xFF, 0x80, 0x80) : Brush(0x5A, 0x20, 0x20);
+            StreamBar.Background = streaming ? Brush(0xFF, 0x30, 0x30) : Brush(0x16, 0x30, 0x1E);
+            StreamStateText.Foreground = streaming ? Brush(0xFF, 0x60, 0x60) : Brush(0x7F, 0xAE, 0x86);
+            StreamStateText.Text = !StartButton.IsEnabled && !streaming ? "STARTING..." : streaming ? "ON" + (_resLabel != null ? " · " + _resLabel : "") + " · TAP TO STOP" : "OFF · TAP TO START";
         }
 
         /// <summary>A tap on a pill opens the Network and login section, where the addresses and switches are.</summary>
