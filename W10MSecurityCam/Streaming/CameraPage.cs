@@ -73,16 +73,22 @@ a{color:#9cf0b0}
 .fld{border:1px solid #142a1a;border-radius:6px;background:#0a160d;padding:6px 9px 7px;margin:0 0 4px}
 .fld b{display:block;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#6f8f77;font-weight:600}
 .fld code{display:block;font-family:Consolas,'Cascadia Mono',monospace;font-size:12px;color:#cfffd2;margin-top:3px;word-break:break-all;user-select:all}
-select{background:#0a160d;color:#cfffd2;border:0;padding:4px 0;font-size:13px;font-family:Consolas,'Cascadia Mono',monospace;width:100%;margin-top:2px;cursor:pointer}
-select option{background:#071109;color:#9cc3a2;padding:6px}select option:checked{background:#163a1e;color:#cfffd2}
-select:disabled{opacity:.5}
-.fld:focus-within{border-color:#39ff14}
-.sl .t{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#d8f5dc}
-.sl .t em{font-style:normal;font-family:Consolas,'Cascadia Mono',monospace;color:#fff;margin-left:6px}
+.pk{position:relative;cursor:pointer;user-select:none}.pk.open{border-color:#39ff14}.pk.dis{opacity:.5;pointer-events:none}
+.pk .pv{display:flex;justify-content:space-between;align-items:center;font-family:Consolas,'Cascadia Mono',monospace;font-size:14px;color:#cfffd2;margin-top:3px}
+.pk .pv i{font-style:normal;color:#3fbf5f}
+.pk .list{display:none;position:absolute;left:-1px;right:-1px;top:100%;margin-top:3px;background:#071109;border:1px solid #39ff14;border-radius:6px;z-index:20;overflow:hidden;max-height:320px;overflow-y:auto;box-shadow:0 8px 20px rgba(0,0,0,.7)}
+.pk.open .list{display:block}
+.pk .list div{position:relative;padding:9px 12px 9px 16px;font-family:Consolas,'Cascadia Mono',monospace;font-size:13px;color:#9cc3a2;border-bottom:1px solid #0e2014}
+.pk .list div:last-child{border-bottom:0}.pk .list div:hover{background:#0e2014;color:#cfffd2}
+.pk .list div.a{background:#163a1e;color:#cfffd2}.pk .list div.a:before{content:'';position:absolute;left:0;top:9px;bottom:9px;width:3px;background:#39ff14;border-radius:0 2px 2px 0}
+.sl .t{display:flex;justify-content:space-between;align-items:center}
+.sl .val{display:flex;align-items:baseline;gap:6px;margin-top:3px}
+.sl .val em{font-style:normal;font-family:Consolas,'Cascadia Mono',monospace;font-size:14px;color:#fff}
+.sl .val small{font-size:10px;color:#7fae86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .seg{display:inline-flex;border:1px solid #1f3a26;border-radius:10px;overflow:hidden;font-size:10px;cursor:pointer}
-.seg span{padding:2px 8px;color:#7fae86}.seg span.a{background:#1f3a26;color:#cfffd2}
+.seg span{padding:2px 9px;color:#7fae86}.seg span.a{background:#1f3a26;color:#cfffd2}
 input[type=range]{width:100%;accent-color:#39ff14;margin:8px 0 0}input[type=range]:disabled{opacity:.35}
-.sl.off .t em{color:#7fae86}
+.sl.off .val em{color:#7fae86}
 input[type=text],input[type=password],input:not([type]){background:#06100a;color:#d6e8d9;border:1px solid #1f3a26;border-radius:6px;padding:7px 9px;font-size:13px;width:100%;box-sizing:border-box;margin:4px 0 0}
 button{background:#0e2a14;color:#e6ffe8;border:1px solid #2e7d46;border-radius:6px;padding:8px 12px;font-size:13px;cursor:pointer;width:100%;margin:4px 0 0}
 button:hover:not(:disabled){background:#18452b}button:disabled{opacity:.35}
@@ -121,19 +127,19 @@ button:hover:not(:disabled){background:#18452b}button:disabled{opacity:.35}
 
 <div class='dr'><div class='dh' data-f='video'>VIDEO<i>&#x25B8;</i></div><div class='db' id='video'>
  <div class='bad' id='ta3' style='display:none'>Heat protection: 1080p / 6 Mbps</div>
- <div class='fld'><b>Resolution</b><select id='fsel'></select></div>
- <div class='fld'><b>Bitrate</b><select id='bsel'></select></div>
+ <div class='fld pk' id='fsel' data-k='format'><b>Resolution</b><div class='pv'><span>-</span><i>&#x25BE;</i></div><div class='list'></div></div>
+ <div class='fld pk' id='bsel' data-k='bitrate'><b>Bitrate</b><div class='pv'><span>-</span><i>&#x25BE;</i></div><div class='list'></div></div>
  <div class='sw' data-k='highbw' id='hb'><span class='n'>High bandwidth (over 24 Mbps)<i class='tip' data-tip='Unlocks bitrates up to 60 Mbps. Needs 5 GHz Wi-Fi or USB; 2.4 GHz drops frames.'>i</i></span><span class='s'>OFF</span></div>
- <div class='fld'><b>Keyframe every</b><select id='ksel'><option value='0.5'>0.5 s</option><option value='1'>1 s</option><option value='2'>2 s</option><option value='3'>3 s</option><option value='4'>4 s</option></select></div>
+ <div class='fld pk' id='ksel' data-k='keyframe'><b>Keyframe every</b><div class='pv'><span>-</span><i>&#x25BE;</i></div><div class='list'></div></div>
  <div class='sw' data-k='audio' id='au'><span class='n'>Microphone audio (AAC)</span><span class='s'>OFF</span></div>
 </div></div>
 
 <div class='dr'><div class='dh' data-f='camera'>CAMERA<i>&#x25B8;</i></div><div class='db' id='camera'>
  <div class='sw' id='all'><span class='n'>Automatic focus, exposure and white balance</span><span class='s'>ON</span></div>
  <div class='sw' id='fo'><span class='n'>Focus once and lock<i class='tip' data-tip='Off: autofocus once and lock the lens there. On (locked, or held by the power-saving hold): press to go back to continuous autofocus.'>i</i></span><span class='s'>OFF</span></div>
- <div class='fld sl' id='fsl' style='margin-top:4px'><div class='t'><span>Focus<em id='fv'></em></span><span class='seg' id='fseg'><span>Auto</span><span>Manual</span></span></div><input type='range' id='fs' min='0' max='100' step='1'></div>
- <div class='fld sl' id='esl'><div class='t'><span>Exposure<em id='ev'></em></span><span class='seg' id='eseg'><span>Auto</span><span>Manual</span></span></div><input type='range' id='es' min='0' max='100' step='0.5'></div>
- <div class='fld sl' id='wsl'><div class='t'><span>White balance<em id='wv'></em></span><span class='seg' id='wseg'><span>Auto</span><span>Manual</span></span></div><input type='range' id='ws' min='2000' max='8000' step='100'></div>
+ <div class='fld sl' id='fsl' style='margin-top:4px'><div class='t'><b>Focus</b><span class='seg' id='fseg'><span>Auto</span><span>Manual</span></span></div><div class='val'><em id='fv'>-</em><small id='fn'></small></div><input type='range' id='fs' min='0' max='100' step='1'></div>
+ <div class='fld sl' id='esl'><div class='t'><b>Exposure</b><span class='seg' id='eseg'><span>Auto</span><span>Manual</span></span></div><div class='val'><em id='ev'>-</em><small id='en'></small></div><input type='range' id='es' min='0' max='100' step='0.5'></div>
+ <div class='fld sl' id='wsl'><div class='t'><b>White balance</b><span class='seg' id='wseg'><span>Auto</span><span>Manual</span></span></div><div class='val'><em id='wv'>-</em><small id='wn'></small></div><input type='range' id='ws' min='2000' max='8000' step='100'></div>
 </div></div>
 
 <div class='dr'><div class='dh' data-f='power'>POWER<i>&#x25B8;</i></div><div class='db' id='power'>
@@ -172,10 +178,16 @@ function $(i){return document.getElementById(i)}
 function esc(t){return String(t).replace(/[&<>""']/g,function(c){return '&#'+c.charCodeAt(0)+';'})}
 function e2s(ms){return 100*Math.log(ms/st.expMin)/Math.log(st.expMax/st.expMin)}
 function s2e(v){return st.expMin*Math.pow(st.expMax/st.expMin,v/100)}
-function fill(sel,vals,txt){
- var key=vals.join('|');if(sel.dataset.k===key)return;sel.dataset.k=key;sel.innerHTML='';
- vals.forEach(function(v){var o=document.createElement('option');o.value=v;o.textContent=txt(v);sel.appendChild(o)})
+// a picker tile: the current value on the tile, the themed list below it while open; a tap on a row sends the key
+function pick(id,vals,txt,cur,dis){
+ var e=$(id),l=e.querySelector('.list'),key=vals.join('|')+'#'+cur;
+ e.querySelector('.pv span').textContent=txt(cur===undefined||cur===null||cur===''?vals[0]:cur);
+ e.className='fld pk'+(e.className.indexOf('open')>=0?' open':'')+(dis?' dis':'');
+ if(l.dataset.k===key)return;l.dataset.k=key;l.innerHTML='';
+ vals.forEach(function(v){var o=document.createElement('div');o.textContent=txt(v);if(String(v)===String(cur))o.className='a';
+  o.onclick=function(ev){ev.stopPropagation();e.className='fld pk';var k=e.getAttribute('data-k');if(k==='keyframe')send('keyframe='+v);else video(k,v)};l.appendChild(o)})
 }
+document.addEventListener('click',function(ev){var ps=document.querySelectorAll('.pk');for(var i=0;i<ps.length;i++){var p=ps[i];if(p.contains(ev.target)){if(p.className.indexOf('dis')<0)p.className=p.className.indexOf('open')>=0?'fld pk':'fld pk open'}else p.className=p.className.replace(' open','')}});
 function sw(id,on,dis,txt){var e=$(id);e.className='sw'+(on?' on':'')+(dis?' dis':'');e.lastElementChild.textContent=txt||(on?'ON':'OFF')}
 function bar(id,on,dis,txt){var e=$(id);e.className='bar'+(on?' on':'')+(dis?' dis':'');e.lastElementChild.textContent=txt}
 function svc(id,cls,addr,note){$(id).className='svc'+(cls?' '+cls:'');$(id+'a').textContent=addr;$(id+'n').textContent=note||''}
@@ -233,10 +245,9 @@ function render(){
  bar('btt',st.torchOn,!w||p||!st.torchSupported||!s,st.torchOn?'ON · '+st.torchLeftSec+' s':p?'OFF · HEAT PROTECTION':!st.torchSupported?'OFF · NOT ON THIS CAMERA':!s?'OFF · STREAM FIRST':'OFF');
  // video
  $('ta3').style.display=p?'block':'none';
- fill($('fsel'),st.formats,function(v){return v.replace('x',' x ').replace('@',' @ ')+' fps'});
- fill($('bsel'),st.bitrates,function(v){return v=='auto'?'auto':v+' Mbps'});
- $('fsel').value=st.format;$('bsel').value=st.bitrate;$('ksel').value=String(st.keyframeSec);
- $('fsel').disabled=$('bsel').disabled=$('ksel').disabled=!w||p;
+ pick('fsel',st.formats,function(v){return v.replace('x',' x ').replace('@',' @ ')+' fps'},st.format,!w||p);
+ pick('bsel',st.bitrates,function(v){return v=='auto'?'auto':v+' Mbps'},st.bitrate,!w||p);
+ pick('ksel',['0.5','1','2','3','4'],function(v){return v+' s'},String(st.keyframeSec),!w||p);
  sw('hb',st.highBw,!w||p);sw('au',st.audioOn,!w);
  // camera
  sw('all',st.focusAuto&&st.exposureAuto&&st.wbAuto,!w);
@@ -259,9 +270,14 @@ function render(){
  $('now').textContent=(st.mode||'')+' - '+(st.now||'');
 }
 function labels(){
- $('fv').textContent=st.focusHeld?'held (auto, lens parked)':st.focusAuto?'auto':Math.round($('fs').value)+(st.focusLocked?' (locked)':' (0 near - 100 far)');
- var ms=s2e($('es').value);$('ev').textContent=st.exposureAuto?'auto':ms.toFixed(ms<10?2:1)+' ms (1/'+Math.round(1000/ms)+' s)';
+ var iso=/ISO (\d+)/.exec(st.now||''),isoT=iso?' · ISO '+iso[1]:'';
+ $('fv').textContent=st.focusAuto?'auto':Math.round($('fs').value);
+ $('fn').textContent=st.focusHeld?'held, lens parked':st.focusAuto?'continuous':st.focusLocked?'locked · 0 near, 100 far':'0 near, 100 far';
+ var ms=s2e($('es').value),mt=ms.toFixed(ms<10?2:1);
+ $('ev').textContent=st.exposureAuto?'auto':mt+' ms';
+ $('en').textContent=(st.exposureAuto?st.exposureMs.toFixed(st.exposureMs<10?2:1)+' ms (1/'+Math.round(1000/Math.max(0.001,st.exposureMs))+' s)':'1/'+Math.round(1000/ms)+' s')+isoT+(st.exposureAuto?' now':'');
  $('wv').textContent=st.wbAuto?'auto':$('ws').value+' K';
+ $('wn').textContent=st.wbAuto?st.wb+' K now':'';
 }
 function send(body){
  touched=Date.now();
@@ -292,9 +308,6 @@ $('fs').oninput=function(){touched=Date.now();labels();later('focus='+this.value
 $('es').oninput=function(){touched=Date.now();labels();later('exposure='+s2e(this.value).toFixed(3))};
 $('ws').oninput=function(){touched=Date.now();labels();later('wb='+this.value)};
 function video(k,v){send(k+'='+v);$('msg').textContent='Applying - the stream restarts for a moment...'}
-$('fsel').onchange=function(){video('format',this.value)};
-$('bsel').onchange=function(){video('bitrate',this.value)};
-$('ksel').onchange=function(){send('keyframe='+this.value)};
 // every switch row: data-k is the config key; the row's current state decides on/off
 var rows=document.querySelectorAll('.sw[data-k]');
 for(var i=0;i<rows.length;i++)rows[i].onclick=function(e){

@@ -90,6 +90,61 @@
         <SolidColorBrush x:Key="ComboBoxItemBackgroundSelected" Color="#163A1E" />
         <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPointerOver" Color="#1A4424" />
         <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPressed" Color="#1A4424" />
+        <!-- Picker tiles (Resolution, Bitrate, Keyframe): a Field-looking button; its list opens as a themed flyout. -->
+        <Style x:Key="PickButton" TargetType="Button">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Background" Value="#0A160D" />
+            <Setter Property="BorderBrush" Value="#142A1A" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="9,5,9,6" />
+            <Setter Property="Margin" Value="0,0,0,4" />
+        </Style>
+        <Style x:Key="PickValue" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Consolas" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Foreground" Value="#CFFFD2" />
+            <Setter Property="Margin" Value="0,2,0,0" />
+        </Style>
+        <Style x:Key="ValueNote" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="Foreground" Value="#7FAE86" />
+            <Setter Property="Margin" Value="6,0,0,0" />
+            <Setter Property="VerticalAlignment" Value="Bottom" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        </Style>
+        <Style x:Key="PickFlyout" TargetType="FlyoutPresenter">
+            <Setter Property="Background" Value="#071109" />
+            <Setter Property="BorderBrush" Value="#39FF14" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="MinWidth" Value="230" />
+            <Setter Property="MaxHeight" Value="420" />
+        </Style>
+        <Style x:Key="PickItem" TargetType="ListViewItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        </Style>
+        <DataTemplate x:Key="PickRow">
+            <Grid Background="{Binding Back}" MinHeight="38">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                <Border Width="3" Background="{Binding Light}" CornerRadius="0,2,2,0" Margin="0,9,12,9" />
+                <TextBlock Grid.Column="1" Text="{Binding Text}" Foreground="{Binding Fore}" FontFamily="Consolas" FontSize="13" VerticalAlignment="Center" Margin="0,0,14,0" />
+            </Grid>
+        </DataTemplate>
+        <!-- The Auto / Manual segment on a camera tile (the code colours the active half). -->
+        <Style x:Key="Seg" TargetType="Border">
+            <Setter Property="BorderBrush" Value="#1F3A26" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="Background" Value="#0A160D" />
+        </Style>
+        <Style x:Key="SegL" TargetType="Border"><Setter Property="CornerRadius" Value="9,0,0,9" /><Setter Property="Padding" Value="9,2,9,3" /></Style>
+        <Style x:Key="SegR" TargetType="Border"><Setter Property="CornerRadius" Value="0,9,9,0" /><Setter Property="Padding" Value="9,2,9,3" /></Style>
+        <Style x:Key="SegText" TargetType="TextBlock"><Setter Property="FontSize" Value="10" /><Setter Property="Foreground" Value="#7FAE86" /></Style>
         <Style x:Key="ThemedCombo" TargetType="ComboBox">
             <Setter Property="HorizontalAlignment" Value="Stretch" />
             <Setter Property="FontFamily" Value="Consolas" />
@@ -521,6 +576,9 @@
                     </Button>
                 </Border>
                 <StackPanel Visibility="Collapsed">
+                    <ComboBox x:Name="ResolutionBox" SelectionChanged="Setting_Changed" />
+                    <ComboBox x:Name="BitrateBox" SelectionChanged="Setting_Changed" />
+                    <ComboBox x:Name="KeyframeBox" SelectionChanged="Setting_Changed" />
                     <ToggleSwitch x:Name="PreviewToggle" Toggled="PreviewToggle_Toggled" />
                     <ToggleSwitch x:Name="PowerSaveToggle" IsOn="True" Toggled="PowerSaveToggle_Toggled" />
                     <TextBlock x:Name="TorchAlert" Text="Heat protection: flashlight locked" Visibility="Collapsed" />
@@ -536,14 +594,34 @@
                         </Border>
                         <StackPanel x:Name="VideoPanel" Visibility="Collapsed" Margin="8,6,8,4">
                             <TextBlock x:Name="VideoAlert" Text="Heat protection: 1080p / 6 Mbps" Foreground="#FF5555" FontWeight="Bold" FontSize="12" TextWrapping="Wrap" Visibility="Collapsed" Margin="0,2,0,4" />
-                            <Border Style="{StaticResource Field}"><StackPanel><TextBlock Text="RESOLUTION" Style="{StaticResource FieldLabel}" /><ComboBox x:Name="ResolutionBox" Style="{StaticResource ThemedCombo}" SelectionChanged="Setting_Changed" /></StackPanel></Border>
-                            <Border Style="{StaticResource Field}"><StackPanel><TextBlock Text="BITRATE" Style="{StaticResource FieldLabel}" /><ComboBox x:Name="BitrateBox" Style="{StaticResource ThemedCombo}" SelectionChanged="Setting_Changed" /></StackPanel></Border>
+                            <!-- Pickers: a tile that opens a themed list (the stock ComboBox popup can't be themed on this OS build).
+                                 The ComboBoxes themselves live hidden further down and keep holding the items and the choice. -->
+                            <Button x:Name="ResolutionPick" Style="{StaticResource PickButton}" Tag="ResolutionBox" Click="Pick_Click">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <StackPanel><TextBlock Text="RESOLUTION" Style="{StaticResource FieldLabel}" /><TextBlock x:Name="ResolutionPickText" Text="-" Style="{StaticResource PickValue}" /></StackPanel>
+                                    <TextBlock Grid.Column="1" Text="&#x25BE;" Foreground="#3FBF5F" FontSize="14" VerticalAlignment="Center" />
+                                </Grid>
+                            </Button>
+                            <Button x:Name="BitratePick" Style="{StaticResource PickButton}" Tag="BitrateBox" Click="Pick_Click">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <StackPanel><TextBlock Text="BITRATE" Style="{StaticResource FieldLabel}" /><TextBlock x:Name="BitratePickText" Text="-" Style="{StaticResource PickValue}" /></StackPanel>
+                                    <TextBlock Grid.Column="1" Text="&#x25BE;" Foreground="#3FBF5F" FontSize="14" VerticalAlignment="Center" />
+                                </Grid>
+                            </Button>
                             <Grid>
                                 <ToggleSwitch x:Name="HighBwToggle" Style="{StaticResource RowSwitch}" Margin="0,0,26,4" Header="High bandwidth (over 24 Mbps)" IsOn="False" Toggled="HighBwToggle_Toggled" />
                                 <Button Style="{StaticResource InfoButton}" VerticalAlignment="Center"><Button.Flyout><Flyout><TextBlock Style="{StaticResource InfoText}"
                                     Text="Unlocks bitrates up to 60 Mbps. Needs 5 GHz Wi-Fi or USB; 2.4 GHz drops frames." /></Flyout></Button.Flyout></Button>
                             </Grid>
-                            <Border Style="{StaticResource Field}"><StackPanel><TextBlock Text="KEYFRAME EVERY" Style="{StaticResource FieldLabel}" /><ComboBox x:Name="KeyframeBox" Style="{StaticResource ThemedCombo}" SelectionChanged="Setting_Changed" /></StackPanel></Border>
+                            <Button x:Name="KeyframePick" Style="{StaticResource PickButton}" Tag="KeyframeBox" Click="Pick_Click">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <StackPanel><TextBlock Text="KEYFRAME EVERY" Style="{StaticResource FieldLabel}" /><TextBlock x:Name="KeyframePickText" Text="-" Style="{StaticResource PickValue}" /></StackPanel>
+                                    <TextBlock Grid.Column="1" Text="&#x25BE;" Foreground="#3FBF5F" FontSize="14" VerticalAlignment="Center" />
+                                </Grid>
+                            </Button>
                             <ToggleSwitch x:Name="AudioToggle" Style="{StaticResource RowSwitch}" Header="Microphone audio (AAC)" IsOn="False" Toggled="AudioToggle_Toggled" />
                         </StackPanel>
                     </StackPanel>
@@ -567,35 +645,59 @@
                                     <TextBlock x:Name="FocusOnceStateText" Grid.Column="2" Text="OFF" Style="{StaticResource BarState}" Margin="8,0,0,0" />
                                 </Grid>
                             </Button>
-                            <TextBlock x:Name="TuningStateText" Text="" FontSize="11" Foreground="#B9CFBD" TextWrapping="Wrap" Margin="0,0,0,4" />
-                            <!-- Each setting is a tile: its value as the label, Auto / Manual on the right, the slider below (greyed
-                                 out while that setting is automatic). As in W10MDashcam / W10MWebCam. -->
+                            <TextBlock x:Name="TuningStateText" Text="" Visibility="Collapsed" />
+                            <!-- Each setting is a value tile: small-caps name and an Auto / Manual segment on top, the value line
+                                 (big, with a dim note), the slider below (greyed out while that setting is automatic). The hidden
+                                 ToggleSwitches (FocusAutoCheck ...) still hold Auto / Manual; the segment flips them (Seg_Tapped). -->
                             <StackPanel x:Name="ManualCameraPanel">
                                 <Border Style="{StaticResource Field}">
                                     <StackPanel>
                                         <Grid>
-                                            <TextBlock x:Name="FocusLabel" Text="Focus" FontSize="12" Foreground="#D8F5DC" VerticalAlignment="Center" />
-                                            <ToggleSwitch x:Name="FocusAutoCheck" OnContent="Auto" OffContent="Manual" Toggled="SubAuto_Changed" HorizontalAlignment="Right" MinWidth="0" Margin="0,-6,-8,-6" />
+                                            <TextBlock Text="FOCUS" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" />
+                                            <Border x:Name="FocusSeg" Style="{StaticResource Seg}" Tag="FocusAutoCheck" Tapped="Seg_Tapped">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Border x:Name="FocusSegA" Style="{StaticResource SegL}"><TextBlock Text="Auto" Style="{StaticResource SegText}" /></Border>
+                                                    <Border x:Name="FocusSegM" Style="{StaticResource SegR}"><TextBlock Text="Manual" Style="{StaticResource SegText}" /></Border>
+                                                </StackPanel>
+                                            </Border>
                                         </Grid>
-                                        <Slider x:Name="FocusSlider" Minimum="0" Maximum="100" StepFrequency="1" Margin="0,-4,0,-6" ValueChanged="TuningSlider_ValueChanged" />
+                                        <StackPanel Orientation="Horizontal" Margin="0,3,0,0"><TextBlock x:Name="FocusLabel" Text="-" Style="{StaticResource PickValue}" /><TextBlock x:Name="FocusNote" Text="" Style="{StaticResource ValueNote}" /></StackPanel>
+                                        <Slider x:Name="FocusSlider" Minimum="0" Maximum="100" StepFrequency="1" Margin="0,-2,0,-8" ValueChanged="TuningSlider_ValueChanged" />
                                     </StackPanel>
                                 </Border>
                                 <Border Style="{StaticResource Field}">
                                     <StackPanel>
                                         <Grid>
-                                            <TextBlock x:Name="ExposureLabel" Text="Exposure" FontSize="12" Foreground="#D8F5DC" VerticalAlignment="Center" />
-                                            <ToggleSwitch x:Name="ExposureAutoCheck" OnContent="Auto" OffContent="Manual" Toggled="SubAuto_Changed" HorizontalAlignment="Right" MinWidth="0" Margin="0,-6,-8,-6" />
+                                            <TextBlock Text="EXPOSURE" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" />
+                                            <Border x:Name="ExposureSeg" Style="{StaticResource Seg}" Tag="ExposureAutoCheck" Tapped="Seg_Tapped">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Border x:Name="ExposureSegA" Style="{StaticResource SegL}"><TextBlock Text="Auto" Style="{StaticResource SegText}" /></Border>
+                                                    <Border x:Name="ExposureSegM" Style="{StaticResource SegR}"><TextBlock Text="Manual" Style="{StaticResource SegText}" /></Border>
+                                                </StackPanel>
+                                            </Border>
                                         </Grid>
-                                        <Slider x:Name="ExposureSlider" Minimum="0" Maximum="100" StepFrequency="0.5" Margin="0,-4,0,-6" ValueChanged="TuningSlider_ValueChanged" />
+                                        <StackPanel Orientation="Horizontal" Margin="0,3,0,0"><TextBlock x:Name="ExposureLabel" Text="-" Style="{StaticResource PickValue}" /><TextBlock x:Name="ExposureNote" Text="" Style="{StaticResource ValueNote}" /></StackPanel>
+                                        <Slider x:Name="ExposureSlider" Minimum="0" Maximum="100" StepFrequency="0.5" Margin="0,-2,0,-8" ValueChanged="TuningSlider_ValueChanged" />
                                     </StackPanel>
                                 </Border>
                                 <Border Style="{StaticResource Field}">
                                     <StackPanel>
                                         <Grid>
-                                            <TextBlock x:Name="WbLabel" Text="White balance" FontSize="12" Foreground="#D8F5DC" VerticalAlignment="Center" />
-                                            <ToggleSwitch x:Name="WbAutoCheck" OnContent="Auto" OffContent="Manual" Toggled="SubAuto_Changed" HorizontalAlignment="Right" MinWidth="0" Margin="0,-6,-8,-6" />
+                                            <TextBlock Text="WHITE BALANCE" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" />
+                                            <Border x:Name="WbSeg" Style="{StaticResource Seg}" Tag="WbAutoCheck" Tapped="Seg_Tapped">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Border x:Name="WbSegA" Style="{StaticResource SegL}"><TextBlock Text="Auto" Style="{StaticResource SegText}" /></Border>
+                                                    <Border x:Name="WbSegM" Style="{StaticResource SegR}"><TextBlock Text="Manual" Style="{StaticResource SegText}" /></Border>
+                                                </StackPanel>
+                                            </Border>
                                         </Grid>
-                                        <Slider x:Name="WbSlider" Minimum="2000" Maximum="8000" StepFrequency="100" Margin="0,-4,0,-6" ValueChanged="TuningSlider_ValueChanged" />
+                                        <StackPanel Orientation="Horizontal" Margin="0,3,0,0"><TextBlock x:Name="WbLabel" Text="-" Style="{StaticResource PickValue}" /><TextBlock x:Name="WbNote" Text="" Style="{StaticResource ValueNote}" /></StackPanel>
+                                        <Slider x:Name="WbSlider" Minimum="2000" Maximum="8000" StepFrequency="100" Margin="0,-2,0,-8" ValueChanged="TuningSlider_ValueChanged" />
+                                        <StackPanel Visibility="Collapsed">
+                                            <ToggleSwitch x:Name="FocusAutoCheck" Toggled="SubAuto_Changed" />
+                                            <ToggleSwitch x:Name="ExposureAutoCheck" Toggled="SubAuto_Changed" />
+                                            <ToggleSwitch x:Name="WbAutoCheck" Toggled="SubAuto_Changed" />
+                                        </StackPanel>
                                     </StackPanel>
                                 </Border>
                             </StackPanel>

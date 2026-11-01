@@ -247,6 +247,7 @@ namespace W10MSecurityCam
                 AutoStartToggle.IsOn = !(_settings.Values["AutoStart"] is bool b0) || b0;
                 LoadDisplaySettings();
                 LoadHeatProtectSetting();
+                UpdatePickTexts();
 
                 bool crashedLastTime = _settings.Values["StartInProgress"] is bool sip && sip;
                 bool autoStarting = AutoStartToggle.IsOn && !crashedLastTime;
@@ -364,6 +365,7 @@ namespace W10MSecurityCam
 
         private async void Setting_Changed(object sender, SelectionChangedEventArgs e)
         {
+            UpdatePickTexts();
             if (!_applyingSettings && sender == ResolutionBox && ResolutionBox.SelectedItem is FormatOption nf && BitrateBox.SelectedItem is BitrateOption cb && cb.Bps != 0)
             {
                 // a resolution above 1080p gets 24 Mbps unless more was chosen; back at 1080p or below, 24 goes back to 4
@@ -1056,17 +1058,87 @@ namespace W10MSecurityCam
             UpdateFocusOnceRow();
         }
 
+        /// <summary>The value line of each camera tile: the value (dim while automatic) and a small note beside it.</summary>
         private void UpdateTuningLabels()
         {
-            FocusLabel.Text = !_tuning.FocusSupported ? "Focus: not adjustable"
-                : _tuning.FocusHeld ? "Focus: held (automatic, lens parked)"
-                : _tuning.FocusAuto ? "Focus: automatic"
-                : "Focus: " + Math.Round(_tuning.FocusPercent) + (_focusLockedByOnce ? " (locked)" : " (0 near - 100 far)");
-            ExposureLabel.Text = !_tuning.ExposureSupported ? "Exposure: not adjustable"
-                : _tuning.ExposureAuto ? "Exposure: automatic"
-                : string.Format("Exposure: {0:0.##} ms (1/{1:0} s)", _tuning.ExposureMs, 1000.0 / Math.Max(0.001, _tuning.ExposureMs));
-            WbLabel.Text = !_tuning.WhiteBalanceSupported ? "White balance: not adjustable"
-                : _tuning.WbAuto ? "White balance: automatic" : "White balance: " + _tuning.WhiteBalanceKelvin + " K";
+            var bright = Brush(0xFF, 0xFF, 0xFF); var dim = Brush(0x7F, 0xAE, 0x86);
+            string iso = System.Text.RegularExpressions.Regex.Match(_tuning.State ?? "", @"ISO (\d+)").Groups[1].Value;
+            string expNow = string.Format("{0:0.##} ms (1/{1:0} s)", _tuning.ExposureMs, 1000.0 / Math.Max(0.001, _tuning.ExposureMs));
+            FocusLabel.Text = !_tuning.FocusSupported ? "n/a" : _tuning.FocusAuto ? "auto" : Math.Round(_tuning.FocusPercent).ToString();
+            FocusNote.Text = !_tuning.FocusSupported ? "not adjustable" : _tuning.FocusHeld ? "held, lens parked" : _tuning.FocusAuto ? "continuous" : _focusLockedByOnce ? "locked · 0 near, 100 far" : "0 near, 100 far";
+            ExposureLabel.Text = !_tuning.ExposureSupported ? "n/a" : _tuning.ExposureAuto ? "auto" : string.Format("{0:0.##} ms", _tuning.ExposureMs);
+            ExposureNote.Text = !_tuning.ExposureSupported ? "not adjustable" : (_tuning.ExposureAuto ? expNow : string.Format("1/{0:0} s", 1000.0 / Math.Max(0.001, _tuning.ExposureMs))) + (iso.Length > 0 ? " · ISO " + iso : "") + (_tuning.ExposureAuto ? " now" : "");
+            WbLabel.Text = !_tuning.WhiteBalanceSupported ? "n/a" : _tuning.WbAuto ? "auto" : _tuning.WhiteBalanceKelvin + " K";
+            WbNote.Text = !_tuning.WhiteBalanceSupported ? "not adjustable" : _tuning.WbAuto ? _tuning.WhiteBalanceKelvin + " K now" : "";
+            FocusLabel.Foreground = _tuning.FocusAuto ? dim : bright;
+            ExposureLabel.Foreground = _tuning.ExposureAuto ? dim : bright;
+            WbLabel.Foreground = _tuning.WbAuto ? dim : bright;
+            SetSeg(FocusSegA, FocusSegM, _tuning.FocusAuto);
+            SetSeg(ExposureSegA, ExposureSegM, _tuning.ExposureAuto);
+            SetSeg(WbSegA, WbSegM, _tuning.WbAuto);
+        }
+
+        /// <summary>Colours the active half of an Auto / Manual segment.</summary>
+        private static void SetSeg(Border a, Border m, bool auto)
+        {
+            var on = Brush(0x1F, 0x3A, 0x26); var off = Brush(0x0A, 0x16, 0x0D);
+            var onText = Brush(0xCF, 0xFF, 0xD2); var offText = Brush(0x7F, 0xAE, 0x86);
+            a.Background = auto ? on : off; m.Background = auto ? off : on;
+            ((TextBlock)a.Child).Foreground = auto ? onText : offText;
+            ((TextBlock)m.Child).Foreground = auto ? offText : onText;
+        }
+
+        /// <summary>A tap on a segment flips the hidden switch it names (Tag), whose handler does the rest.</summary>
+        private void Seg_Tapped(object sender, Windows.UI.Xaml.Input.TappedRoutedEventArgs e)
+        {
+            if (FindName((string)((Border)sender).Tag) is ToggleSwitch sw && sw.IsEnabled) sw.IsOn = !sw.IsOn;
+        }
+
+        // ---- the pickers: a tile opens a themed list of the hidden ComboBox's items; a tap on a row selects it in the ComboBox.
+        private sealed class PickRowItem
+        {
+            public object Value; public string Text;
+            public Windows.UI.Xaml.Media.Brush Light, Fore, Back;
+        }
+
+        private void Pick_Click(object sender, RoutedEventArgs e)
+        {
+            var button = (Button)sender;
+            if (!(FindName((string)button.Tag) is ComboBox box)) return;
+            var rows = new List<PickRowItem>();
+            foreach (var item in box.Items)
+            {
+                bool cur = ReferenceEquals(item, box.SelectedItem);
+                rows.Add(new PickRowItem
+                {
+                    Value = item, Text = item.ToString(),
+                    Light = cur ? GreenFill : Brush(0x07, 0x11, 0x09),
+                    Fore = cur ? Brush(0xCF, 0xFF, 0xD2) : Brush(0x9C, 0xC3, 0xA2),
+                    Back = cur ? Brush(0x16, 0x3A, 0x1E) : Brush(0x07, 0x11, 0x09)
+                });
+            }
+            var list = new ListView
+            {
+                ItemsSource = rows, IsItemClickEnabled = true, SelectionMode = ListViewSelectionMode.None,
+                ItemTemplate = (DataTemplate)Resources["PickRow"], ItemContainerStyle = (Style)Resources["PickItem"], Tag = box
+            };
+            var flyout = new Flyout { Content = list, Placement = Windows.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.Bottom, FlyoutPresenterStyle = (Style)Resources["PickFlyout"] };
+            list.ItemClick += (s, a) =>
+            {
+                if (a.ClickedItem is PickRowItem r) box.SelectedItem = r.Value; // Setting_Changed applies it
+                flyout.Hide();
+            };
+            flyout.ShowAt(button);
+        }
+
+        /// <summary>The value shown on each picker tile (after every selection change and at start).</summary>
+        private void UpdatePickTexts()
+        {
+            if (ResolutionPickText == null) return;
+            ResolutionPickText.Text = ResolutionBox.SelectedItem?.ToString() ?? "-";
+            BitratePickText.Text = BitrateBox.SelectedItem?.ToString() ?? "-";
+            KeyframePickText.Text = KeyframeBox.SelectedItem?.ToString() ?? "-";
+            ResolutionPick.IsEnabled = ResolutionBox.IsEnabled; BitratePick.IsEnabled = BitrateBox.IsEnabled; KeyframePick.IsEnabled = KeyframeBox.IsEnabled;
         }
 
         private void AutoCameraCheck_Changed(object sender, RoutedEventArgs e)
@@ -1424,6 +1496,7 @@ namespace W10MSecurityCam
             SaveOisCheck.IsEnabled = free && (_tuning.OisSupported || _camera == null);
             SaveFocusCheck.IsEnabled = free;
             ResolutionBox.IsEnabled = BitrateBox.IsEnabled = HighBwToggle.IsEnabled = free;
+            UpdatePickTexts();
             VideoAlert.Visibility = _protect ? Visibility.Visible : Visibility.Collapsed;
             KeepPreviewToggle.IsEnabled = free;
             PowerSaveToggle.IsEnabled = free;
