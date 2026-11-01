@@ -18,6 +18,8 @@ select{background:#0d140f;color:#d6e8d9;border:1px solid #1f3a26;border-radius:4
 button{background:#123320;color:#cfffd8;border:1px solid #2e7d46;border-radius:6px;padding:8px 12px;font-size:14px;margin-top:6px;cursor:pointer}
 button:hover:not(:disabled){background:#18452b;box-shadow:0 0 8px rgba(63,191,95,.35)}
 button:disabled{opacity:.35}
+.notice button{margin:0 0 0 auto;padding:4px 10px;font-size:12px}
+#ro{display:none}
 label{font-size:13px;color:#b9cfbd}#msg{color:#e9a;font-size:12px;min-height:16px}
 h2{font-size:13px;color:#9cf0b0;background:#0b1a10;text-transform:uppercase;letter-spacing:1px;border:1px solid #1f3a26;border-left:3px solid #3fbf5f;border-radius:4px;padding:8px 10px;margin:18px 0 6px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
 h2 .ar{font-size:16px;color:#3fbf5f;padding:0 4px}
@@ -70,6 +72,7 @@ button.tog.on{background:#18452b;color:#39ff14;border-color:#39ff14;box-shadow:0
 .bad{color:#ff6b6b;font-size:13px;margin-top:4px}
 </style></head><body>
 <h1><span>W10MSecurityCam</span><span id='ver'></span></h1>
+<div class='notice' id='ro'><span class='ni'>i</span><span id='rotext'>View only.</span><button id='loginb'>Log in</button></div>
 <h2>Status</h2>
 <div class='row'><div id='stat'>loading...</div><div id='warn'></div></div>
 <h2>Video</h2>
@@ -199,7 +202,8 @@ function render(){
  ['all','fa','ea','wa'].forEach(function(i){$(i).disabled=!w});
  $('fs').disabled=!w||st.focusAuto;$('es').disabled=!w||st.exposureAuto;$('ws').disabled=!w||st.wbAuto;
  labels();
- if(!w)$('msg').textContent='View only.';
+ $('ro').style.display=w?'none':'flex';
+ $('rotext').textContent='View only. Changes need the stream login'+(st.defaultLogin?' (default admin / admin)':'')+'.';
 }
 function labels(){
  $('fl').textContent='Focus: '+(st.focusAuto?'automatic':Math.round($('fs').value)+' (0 near - 100 far)');
@@ -210,7 +214,7 @@ function labels(){
 function send(body){
  touched=Date.now();
  fetch('/camera/set',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','X-Requested-With':'W10MSecurityCam'},body:body})
- .then(function(r){return r.ok?r.json():r.text().then(function(x){throw new Error(x)})})
+ .then(function(r){if(r.status==401){location.href='/login';throw new Error('Login needed')}return r.ok?r.json():r.text().then(function(x){throw new Error(x)})})
  .then(function(j){st=j;touched=0;render();if(j.result)$('msg').textContent=j.result})
  .catch(function(e){$('msg').textContent=e.message})
 }
@@ -218,6 +222,7 @@ function load(){
  fetch('/camera/state').then(function(r){return r.json()}).then(function(j){st=j;render()}).catch(function(){});
 }
 function later(body){clearTimeout(t);t=setTimeout(function(){send(body)},400)}
+$('loginb').onclick=function(){location.href='/login'};
 $('lb').onclick=function(){
  var u=$('lu').value.trim(),p=$('lp').value;
  if(p!==$('lp2').value){$('msg').textContent='The two passwords differ';return}

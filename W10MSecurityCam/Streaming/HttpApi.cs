@@ -26,11 +26,12 @@ namespace W10MSecurityCam.Streaming
     /// The small web interface, served on the log port (http://PHONE-IP:5001) and on the RTSP ports:
     ///   /             the app log (plain text)
     ///   /status       health as JSON (for monitoring)
-    ///   /snapshot.jpg the latest picture, when snapshots are turned on (needs the login when one is set)
+    ///   /snapshot.jpg the latest picture, when snapshots are turned on (needs the login)
     ///   /config       view (GET) or change (POST, form fields) settings - only over the USB cable
-    ///   /camera       focus / exposure / white balance page
-    /// Everything needs the stream login, over USB too. Changes (POST) also need the X-Requested-With: W10MSecurityCam
-    /// header and the phone's address as Host.
+    ///   /camera       the settings page; /camera/state its JSON; POST /camera/set changes
+    ///   /login        asks the browser for the login, then back to /camera
+    /// Reading is open on the home network (view only); changes and the snapshot need the stream login, over USB too.
+    /// Changes (POST) also need the X-Requested-With: W10MSecurityCam header and the phone's address as Host.
     /// </summary>
     internal sealed class HttpApi
     {
@@ -49,34 +50,49 @@ namespace W10MSecurityCam.Streaming
             try
             {
                 string path = r.Path.TrimEnd('/');
-                // Everything needs the login, over USB too: any program or web page on the PC the phone is plugged into
-                // can reach the USB port, so being on USB proves nothing.
-                // Checked once per request: with qop each nonce count may only be used once.
-                if (Auth != null && Auth.IsLockedOut(r.RemoteIp))
+                // The pages, the log and the JSON are view only without a login (as in W10MWebCam). Changes, the snapshot
+                // and /login need the stream login, over USB too: any program or web page on the PC the phone is plugged
+                // into can reach the USB port, so being on USB proves nothing. A login the browser sends must be right,
+                // though: a wrong or outdated one gets a 401, so the browser renews the nonce (stale) or asks again instead
+                // of resending it forever. Checked once per request: with qop each nonce count may only be used once.
+                string authorization = Header(r, "Authorization");
+                if (Auth != null && (authorization != null || path == "/login") && Auth.IsLockedOut(r.RemoteIp))
                     return Reply(429, "Too Many Requests", "text/plain", "Too many wrong logins - try again in 30 seconds\n", "Retry-After: 30\r\n");
-                if (Auth != null && !Auth.Check(r.Method, r.Target, Header(r, "Authorization"), r.RemoteIp, out bool gateStale))
-                    return Reply(401, "Unauthorized", "text/plain", "Login required\n", Auth.Challenge(gateStale));
+                bool canWrite = false, stale = false;
+                if (Auth != null && authorization != null && !(canWrite = Auth.Check(r.Method, r.Target, authorization, r.RemoteIp, out stale)))
+                    return Reply(401, "Unauthorized", "text/plain", "Login required\n", Auth.Challenge(stale));
                 if (path == "" || path == "/log")
                     return Reply(200, "OK", "text/plain; charset=utf-8", GetLog());
 
                 if (path == "/status")
                     return Reply(200, "OK", "application/json", GetStatusJson());
 
+                if (path == "/login")
+                {
+                    // Already logged in: straight back to the page. Otherwise the browser asks for the login, then goes back.
+                    if (canWrite) return Reply(302, "Found", "text/plain", "", "Location: /camera\r\n");
+                    return Reply(401, "Unauthorized", "text/html; charset=utf-8",
+                        "<!doctype html><meta http-equiv='refresh' content='0;url=/camera'><p>Login needed. <a href='/login'>Try again</a></p>\n",
+                        Auth != null ? Auth.Challenge(stale) : "");
+                }
+
                 if (path == "/snapshot.jpg" || path == "/snapshot")
                 {
+                    if (!canWrite) return Reply(401, "Unauthorized", "text/plain", "Login required\n", Auth != null ? Auth.Challenge(stale) : "");
                     var jpg = GetSnapshotJpeg != null ? await GetSnapshotJpeg() : null;
                     if (jpg == null) return Reply(404, "Not Found", "text/plain", "Snapshots are turned off (or the camera is not streaming)\n");
                     return Reply(200, "OK", "image/jpeg", jpg, "Cache-Control: no-store\r\n");
                 }
 
                 if (path == "/camera" || path == "/camera/state" || path == "/camera/set")
-                    return await HandleCameraAsync(r, path);
+                    return await HandleCameraAsync(r, path, canWrite, stale);
 
                 if (path == "/config")
                 {
                     if (!r.FromUsb) return Reply(403, "Forbidden", "text/plain", "Settings can only be changed over the USB cable\n");
                     if (r.Method == "POST" && ApplyConfig != null)
                     {
+                        if (!canWrite) return Reply(401, "Unauthorized", "text/plain", "Login required\n", Auth != null ? Auth.Challenge(stale) : "");
                         string refused = RefuseForeignPost(r);
                         if (refused != null) return Reply(403, "Forbidden", "text/plain", refused);
                         var form = ParseForm(r.Body); // changes only in the body, never in the URL
@@ -100,13 +116,13 @@ namespace W10MSecurityCam.Streaming
         }
 
         /// <summary>
-        /// The camera-settings page. Everything here needs the stream login (over USB too), checked in HandleAsync.
+        /// The camera-settings page: view only without the login; canWrite = the request carried the right login
+        /// (checked in HandleAsync), which /camera/set needs - a 401 makes the browser ask for it.
         /// </summary>
-        private async Task<byte[]> HandleCameraAsync(HttpRequest r, string path)
+        private async Task<byte[]> HandleCameraAsync(HttpRequest r, string path, bool canWrite, bool stale)
         {
             string result = null;
             bool loginSet = Auth != null && Auth.Enabled;
-            bool canWrite = loginSet;
 
             if (path == "/camera")
                 return Reply(200, "OK", "text/html; charset=utf-8", CameraPage.Html, "Cache-Control: no-store\r\n");
@@ -115,7 +131,7 @@ namespace W10MSecurityCam.Streaming
             {
                 if (r.Method != "POST") return Reply(405, "Method Not Allowed", "text/plain", "POST only\n");
                 if (!canWrite)
-                    return Reply(403, "Forbidden", "text/plain", "Changes need the login\n");
+                    return Reply(401, "Unauthorized", "text/plain", "Login needed\n", Auth != null ? Auth.Challenge(stale) : "");
                 string refused = RefuseForeignPost(r);
                 if (refused != null) return Reply(403, "Forbidden", "text/plain", refused);
                 var all = ParseForm(r.Body); // changes only in the body, never in the URL
@@ -133,7 +149,8 @@ namespace W10MSecurityCam.Streaming
                 json = json.TrimEnd('}') + ",\"result\":\"" + first + "\"}";
             }
             if (json.StartsWith("{")) json = "{\"canWrite\":" + (canWrite ? "true" : "false") + ",\"loginSet\":" + (loginSet ? "true" : "false")
-                + ",\"defaultLogin\":" + (Auth != null && Auth.IsDefault ? "true" : "false") + ",\"user\":\"" + (Auth != null ? Auth.UserName.Replace("\\", "").Replace("\"", "") : "") + "\"" + (json.Length > 2 ? "," : "") + json.Substring(1);
+                + ",\"fromUsb\":" + (r.FromUsb ? "true" : "false")
+                + ",\"defaultLogin\":" + (Auth != null && Auth.IsDefault ? "true" : "false") + ",\"user\":\"" + (canWrite && Auth != null ? Auth.UserName.Replace("\\", "").Replace("\"", "") : "") + "\"" + (json.Length > 2 ? "," : "") + json.Substring(1);
             return Reply(200, "OK", "application/json", json, "Cache-Control: no-store\r\n");
         }
 
