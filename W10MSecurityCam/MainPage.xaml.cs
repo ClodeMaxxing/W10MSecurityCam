@@ -1272,7 +1272,7 @@ namespace W10MSecurityCam
             SaveFocusCheck.IsEnabled = free;
             ResolutionBox.IsEnabled = BitrateBox.IsEnabled = HighBwToggle.IsEnabled = free;
             VideoAlert.Visibility = _protect ? Visibility.Visible : Visibility.Collapsed;
-            PowerSaveButton.IsEnabled = free; KeepPreviewToggle.IsEnabled = free;
+            KeepPreviewToggle.IsEnabled = free;
             PowerSaveToggle.IsEnabled = free;
         }
 

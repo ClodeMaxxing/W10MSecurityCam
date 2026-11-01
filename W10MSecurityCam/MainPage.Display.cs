@@ -131,6 +131,8 @@ namespace W10MSecurityCam
         {
             bool previewing = _camera != null && _camera.Previewing;
             PreviewOffText.Visibility = previewing ? Visibility.Collapsed : Visibility.Visible;
+            // the one button under the status: it ends whatever shows the picture, or shows it for 60 s
+            ShowPictureButton.Content = previewing || _phoneAdjusting ? "Turn preview off" : "Show camera picture (" + AdjustSeconds + " s)";
             if (previewing) return;
             PreviewOffText.Text = _camera == null ? "Camera starting..."
                 : StreamingNow && _phoneAdjusting ? "Starting the camera picture (the stream restarts for a moment)..."
@@ -170,7 +172,28 @@ namespace W10MSecurityCam
             await ApplyDisplayAsync();
         }
 
-        private async void ShowPictureButton_Click(object sender, RoutedEventArgs e) => await TouchPhoneAdjustAsync(true);
+        /// <summary>Show camera picture (60 s), or - while a picture shows for any reason - Turn preview off: ends the 60 s and switches both preview switches off.</summary>
+        private async void ShowPictureButton_Click(object sender, RoutedEventArgs e)
+        {
+            bool showing = (_camera != null && _camera.Previewing) || _phoneAdjusting;
+            if (!showing) { await TouchPhoneAdjustAsync(true); return; }
+            await TurnPreviewOffAsync();
+        }
+
+        /// <summary>No picture at all: the 60 s ends and Preview on the phone and Keep the preview running go off (one restart while streaming).</summary>
+        private async Task TurnPreviewOffAsync()
+        {
+            EndPhoneAdjust();
+            _loadingDisplayUi = true;
+            try
+            {
+                if (PreviewToggle.IsOn) { PreviewToggle.IsOn = false; _settings.Values["Preview"] = false; }
+                if (KeepPreviewToggle.IsOn) { KeepPreviewToggle.IsOn = false; if (!_protect) _settings.Values["KeepPreview"] = false; }
+            }
+            finally { _loadingDisplayUi = false; }
+            Log("Preview off");
+            await ApplyDisplayAsync(byHand: true);
+        }
 
         /// <summary>A tap on the dark preview area ("Preview off"): the same as Show camera picture.</summary>
         private async void PreviewArea_Tapped(object sender, TappedRoutedEventArgs e) => await TouchPhoneAdjustAsync(true);
@@ -199,15 +222,6 @@ namespace W10MSecurityCam
             await ApplyDisplayAsync();
         }
 
-        private async void PowerSaveButton_Click(object sender, RoutedEventArgs e)
-        {
-            EndPhoneAdjust();
-            _wakeShowing = false; _wakeTimer?.Stop();
-            if (!PowerSaveToggle.IsOn) PowerSaveToggle.IsOn = true; // its handler saves and applies
-            else await ApplyDisplayAsync(byHand: true);
-            if (!StreamingNow) Log("Black screen is on; the screen goes black when streaming starts");
-        }
-
         /// <summary>The black-screen switch from the web page or USB config (powersave=on|off).</summary>
         private async Task SetBlackScreenAsync(bool on)
         {
@@ -220,6 +234,8 @@ namespace W10MSecurityCam
         {
             if (_loadingDisplayUi) return;
             if (!_protect) _settings.Values["PowerSave"] = PowerSaveToggle.IsOn; // forced by heat protection: not saved
+            if (PowerSaveToggle.IsOn) { EndPhoneAdjust(); _wakeShowing = false; _wakeTimer?.Stop(); } // the screen saver ends a picture at once
+            Log("Black screen while streaming " + (PowerSaveToggle.IsOn ? "on" : "off"));
             await ApplyDisplayAsync(byHand: true);
         }
 
@@ -228,6 +244,7 @@ namespace W10MSecurityCam
             if (_loadingDisplayUi) return;
             _settings.Values["Preview"] = PreviewToggle.IsOn;
             Log("Preview on the phone " + (PreviewToggle.IsOn ? "on" : "off"));
+            if (!PreviewToggle.IsOn) { await TurnPreviewOffAsync(); return; } // off means no picture at all, now
             await ApplyDisplayAsync(byHand: true);
         }
 

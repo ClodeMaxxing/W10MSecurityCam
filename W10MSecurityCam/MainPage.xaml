@@ -69,6 +69,24 @@
             <Setter Property="Foreground" Value="#9CF0B0" />
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
+        <!-- A small (i) at the top right of a setting: its explanation opens in a pop-up instead of taking space (as in W10MDashcam / W10MWebCam). -->
+        <Style x:Key="InfoButton" TargetType="Button">
+            <Setter Property="Content" Value="&#x24D8;" />
+            <Setter Property="FontSize" Value="17" />
+            <Setter Property="Foreground" Value="#3FBF5F" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="6,0,2,2" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="VerticalAlignment" Value="Top" />
+        </Style>
+        <Style x:Key="InfoText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="MaxWidth" Value="300" />
+        </Style>
     </Page.Resources>
 
     <Grid>
@@ -233,26 +251,37 @@
                 <!-- Safe mode (the MP4 engine after a crash or two stalls): the way back, as on the web page. -->
                 <Button x:Name="NormalModeButton" Content="Return to normal mode (low-latency engine)" HorizontalAlignment="Stretch" Visibility="Collapsed"
                         Margin="0,2,0,4" Click="NormalModeButton_Click" Background="#3A1010" Foreground="#FFD0D0" BorderBrush="#A03030" />
+                <!-- The picture and the screen saver, right under the status: Show camera picture (60 s) turns into Turn preview off
+                     while a picture shows; the black-screen switch is the screen saver (MainPage.Display.cs). -->
                 <Button x:Name="ShowPictureButton" Content="Show camera picture (60 s)" HorizontalAlignment="Stretch"
-                        Margin="0,2,0,4" Click="ShowPictureButton_Click" />
-                <Button x:Name="PowerSaveButton" Content="Black out the screen now" HorizontalAlignment="Stretch"
-                        Margin="0,0,0,6" Click="PowerSaveButton_Click" />
+                        Margin="0,2,0,2" Click="ShowPictureButton_Click" />
+                <Grid Margin="0,0,0,4">
+                    <ToggleSwitch x:Name="PowerSaveToggle" Header="Black screen while streaming" IsOn="True" Toggled="PowerSaveToggle_Toggled" />
+                    <Button Style="{StaticResource InfoButton}"><Button.Flyout><Flyout><TextBlock Style="{StaticResource InfoText}"
+                        Text="The screen saver: black screen, lowest brightness, preview off. Tap the black screen for 15 s of status." /></Flyout></Button.Flyout></Button>
+                </Grid>
 
                 <Button Style="{StaticResource FoldButton}" Tag="VideoPanel|VIDEO" Content="VIDEO  &#x25B8;" Click="Fold_Click" />
                 <StackPanel x:Name="VideoPanel" Visibility="Collapsed">
                     <TextBlock x:Name="VideoAlert" Text="Heat protection: 1080p / 6 Mbps" Foreground="#FF5555" FontWeight="Bold" FontSize="12" TextWrapping="Wrap" Visibility="Collapsed" Margin="0,2,0,2" />
                     <ComboBox x:Name="ResolutionBox" Header="Resolution" SelectionChanged="Setting_Changed" HorizontalAlignment="Stretch" Margin="0,0,0,6" />
                     <ComboBox x:Name="BitrateBox" Header="Bitrate" SelectionChanged="Setting_Changed" HorizontalAlignment="Stretch" Margin="0,0,0,6" />
-                    <ToggleSwitch x:Name="HighBwToggle" Header="High bandwidth (over 24 Mbps)" IsOn="False" Toggled="HighBwToggle_Toggled" />
-                    <TextBlock Text="Needs 5 GHz Wi-Fi or USB-C; drops frames on 2.4 GHz." Foreground="#7F9A86" FontSize="12" TextWrapping="Wrap" Margin="0,-4,0,6" />
+                    <Grid>
+                        <ToggleSwitch x:Name="HighBwToggle" Header="High bandwidth (over 24 Mbps)" IsOn="False" Toggled="HighBwToggle_Toggled" />
+                        <Button Style="{StaticResource InfoButton}"><Button.Flyout><Flyout><TextBlock Style="{StaticResource InfoText}"
+                            Text="Unlocks bitrates up to 60 Mbps. Needs 5 GHz Wi-Fi or USB; 2.4 GHz drops frames." /></Flyout></Button.Flyout></Button>
+                    </Grid>
                     <ComboBox x:Name="KeyframeBox" Header="Keyframe every" SelectionChanged="Setting_Changed" HorizontalAlignment="Stretch" Margin="0,0,0,6" />
                     <ToggleSwitch x:Name="AudioToggle" Header="Microphone audio (AAC)" IsOn="False" Toggled="AudioToggle_Toggled" />
                 </StackPanel>
 
                 <Button Style="{StaticResource FoldButton}" Tag="CameraPanel|CAMERA" Content="CAMERA  &#x25B8;" Click="Fold_Click" />
                 <StackPanel x:Name="CameraPanel" Visibility="Collapsed">
-                    <ToggleSwitch x:Name="PreviewToggle" Header="Preview on the phone" Toggled="PreviewToggle_Toggled" />
-                    <TextBlock Text="Off by default. On: the picture while stopped, and while streaming unless the screen is blacked out. Adjusting the camera here shows the picture for 60 s anyway (while streaming, one stream restart each way)." Foreground="#7F9A86" FontSize="12" TextWrapping="Wrap" Margin="0,-4,0,6" />
+                    <Grid>
+                        <ToggleSwitch x:Name="PreviewToggle" Header="Preview on the phone" Toggled="PreviewToggle_Toggled" />
+                        <Button Style="{StaticResource InfoButton}"><Button.Flyout><Flyout><TextBlock Style="{StaticResource InfoText}"
+                            Text="The camera picture on this screen, except behind the black screen. Changing it while streaming restarts the stream once." /></Flyout></Button.Flyout></Button>
+                    </Grid>
                     <ToggleSwitch x:Name="AutoCameraCheck" Header="Automatic focus, exposure and white balance" IsOn="True" Toggled="AutoCameraCheck_Changed" />
                     <Button x:Name="FocusOnceButton" Content="Focus once and lock" Click="FocusOnceButton_Click" HorizontalAlignment="Stretch" Margin="0,2,0,4" />
                     <TextBlock x:Name="TuningStateText" Text="" FontSize="11" Foreground="#B9CFBD" TextWrapping="Wrap" Margin="0,0,0,4" />
@@ -278,12 +307,16 @@
                 <Button Style="{StaticResource FoldButton}" Tag="PowerPanel|POWER" Content="POWER  &#x25B8;" Click="Fold_Click" />
                 <StackPanel x:Name="PowerPanel" Visibility="Collapsed">
                     <TextBlock x:Name="PowerAlert" Text="Heat protection: power saving forced on" Foreground="#FF5555" FontWeight="Bold" FontSize="12" TextWrapping="Wrap" Visibility="Collapsed" Margin="0,2,0,2" />
-                    <ToggleSwitch x:Name="PowerSaveToggle" Header="Black screen while streaming" IsOn="True" Toggled="PowerSaveToggle_Toggled" />
-                    <ToggleSwitch x:Name="KeepPreviewToggle" Header="Keep the preview running behind the black screen" Toggled="KeepPreviewToggle_Toggled" />
-                    <TextBlock Text="Off by default: the preview costs CPU and heat (about twice the app's CPU). On: a tap on the black screen shows the picture at once, with no stream restart. Heat protection switches it off until charging resumes." Foreground="#7F9A86" FontSize="12" TextWrapping="Wrap" Margin="0,-4,0,6" />
-                    <TextBlock Text="Tap the black screen to read the status for 15 s. Show camera picture lights it for 60 s (the stream restarts briefly to start and stop the picture). The start/stop chirp follows the phone's Ringer + notifications volume." Foreground="#7F9A86" FontSize="12" TextWrapping="Wrap" Margin="0,-4,0,6" />
-                    <ToggleSwitch x:Name="SaveAllCheck" Header="Power-saving camera features" IsOn="True" Toggled="SaveAll_Changed" />
-                    <TextBlock Text="Less processing and heat: stabilization off for a fixed mount, and focus held once it has settled. Switch it off to choose each one." Foreground="#7F9A86" FontSize="12" TextWrapping="Wrap" Margin="0,-4,0,2" />
+                    <Grid>
+                        <ToggleSwitch x:Name="KeepPreviewToggle" Header="Keep the preview running behind the black screen" Toggled="KeepPreviewToggle_Toggled" />
+                        <Button Style="{StaticResource InfoButton}"><Button.Flyout><Flyout><TextBlock Style="{StaticResource InfoText}"
+                            Text="A tap on the black screen then shows the picture at once. Costs CPU and heat; heat protection switches it off." /></Flyout></Button.Flyout></Button>
+                    </Grid>
+                    <Grid>
+                        <ToggleSwitch x:Name="SaveAllCheck" Header="Power-saving camera features" IsOn="True" Toggled="SaveAll_Changed" />
+                        <Button Style="{StaticResource InfoButton}"><Button.Flyout><Flyout><TextBlock Style="{StaticResource InfoText}"
+                            Text="Stabilization off and focus held once it settles: less processing and heat on a fixed mount. Off: choose each one." /></Flyout></Button.Flyout></Button>
+                    </Grid>
                     <StackPanel x:Name="SavePanel" Visibility="Collapsed" Margin="14,0,0,4">
                         <ToggleSwitch x:Name="SaveOisCheck" Header="Stabilization off (fixed mount)" Toggled="SaveSub_Changed" />
                         <ToggleSwitch x:Name="SaveFocusCheck" Header="Hold focus once it has settled" Toggled="SaveSub_Changed" />
@@ -295,15 +328,28 @@
                     <TextBlock Text="RTSP address (NVR / VLC):" Foreground="#7F9A86" FontSize="12" />
                     <TextBlock x:Name="AddressText" Text="…" IsTextSelectionEnabled="True" TextWrapping="Wrap"
                                FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" />
-                    <ToggleSwitch x:Name="WebServerToggle" Header="Web page (settings and status)" IsOn="True" Toggled="WebServerToggle_Toggled" />
-                    <TextBlock Text="Lets a browser on the same Wi-Fi (or the PC on the USB cable) see the status and, with the login, change settings. Off: only the stream is served. Only the phone can switch it back on." Foreground="#7F9A86" FontSize="12" TextWrapping="Wrap" Margin="0,-4,0,4" />
+                    <Grid>
+                        <ToggleSwitch x:Name="WebServerToggle" Header="Web page (settings and status)" IsOn="True" Toggled="WebServerToggle_Toggled" />
+                        <Button Style="{StaticResource InfoButton}"><Button.Flyout><Flyout><TextBlock Style="{StaticResource InfoText}"
+                            Text="The settings page in a browser on the same Wi-Fi or over USB; readable without the login, changes need it. Off: only the stream is served." /></Flyout></Button.Flyout></Button>
+                    </Grid>
                     <TextBlock x:Name="WebAddressText" Text="…" IsTextSelectionEnabled="True" TextWrapping="Wrap" FontSize="12" Margin="0,0,0,8" />
-                    <ToggleSwitch x:Name="LogServerToggle" Header="Log page (/log)" IsOn="False" Toggled="LogServerToggle_Toggled" />
-                    <ToggleSwitch x:Name="StatsServerToggle" Header="Stats page (/stats)" IsOn="False" Toggled="StatsServerToggle_Toggled" />
-                    <TextBlock Text="The app's log in a browser (also for tools\Get-Phone-Log.cmd), and graphs of the last 12 hours (frame rate, bitrate, battery, power, CPU, memory, heat; a sample every 30 s only while on). Both need the web page on." Foreground="#7F9A86" FontSize="12" TextWrapping="Wrap" Margin="0,-4,0,6" />
+                    <Grid>
+                        <ToggleSwitch x:Name="LogServerToggle" Header="Log page (/log)" IsOn="False" Toggled="LogServerToggle_Toggled" />
+                        <Button Style="{StaticResource InfoButton}"><Button.Flyout><Flyout><TextBlock Style="{StaticResource InfoText}"
+                            Text="The app's log in a browser (needs the web page on)." /></Flyout></Button.Flyout></Button>
+                    </Grid>
+                    <Grid>
+                        <ToggleSwitch x:Name="StatsServerToggle" Header="Stats page (/stats)" IsOn="False" Toggled="StatsServerToggle_Toggled" />
+                        <Button Style="{StaticResource InfoButton}"><Button.Flyout><Flyout><TextBlock Style="{StaticResource InfoText}"
+                            Text="Graphs of the last 12 hours (frame rate, battery, power, CPU, memory, heat), sampled every 30 s while on." /></Flyout></Button.Flyout></Button>
+                    </Grid>
                     <ToggleSwitch x:Name="AutoStartToggle" Header="Start streaming when the app opens" IsOn="True" Toggled="AutoStartToggle_Toggled" />
-                    <ToggleSwitch x:Name="UdpToggle" Header="Allow RTP over UDP" IsOn="False" Toggled="UdpToggle_Toggled" />
-                    <TextBlock Text="TCP is more reliable on Wi-Fi." Foreground="#7F9A86" FontSize="12" TextWrapping="Wrap" Margin="0,-4,0,6" />
+                    <Grid>
+                        <ToggleSwitch x:Name="UdpToggle" Header="Allow RTP over UDP" IsOn="False" Toggled="UdpToggle_Toggled" />
+                        <Button Style="{StaticResource InfoButton}"><Button.Flyout><Flyout><TextBlock Style="{StaticResource InfoText}"
+                            Text="Off: viewers get the stream over TCP, which is more reliable on Wi-Fi." /></Flyout></Button.Flyout></Button>
+                    </Grid>
                     <ToggleSwitch x:Name="SnapshotToggle" Header="Snapshots at /snapshot.jpg" IsOn="False" Toggled="SnapshotToggle_Toggled" />
                     <TextBlock Text="Login (stream and web page)" Foreground="#7F9A86" FontSize="12" Margin="0,8,0,0" />
                     <TextBlock x:Name="LoginStatusText" Text="" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,4" />
