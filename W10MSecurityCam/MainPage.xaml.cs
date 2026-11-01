@@ -1473,6 +1473,17 @@ namespace W10MSecurityCam
             o["usbPort"] = JsonValue.CreateNumberValue(UsbPort);
             o["streamPath"] = JsonValue.CreateStringValue(StreamPath);
             o["streaming"] = JsonValue.CreateBooleanValue(_camera != null && _camera.IsStreaming);
+            // the rest of the phone's switches and the service rows, so the web page can mirror the phone screen
+            o["autoStart"] = JsonValue.CreateBooleanValue(_svAutoStart);
+            o["udp"] = JsonValue.CreateBooleanValue(_server.AllowUdp);
+            o["snapshot"] = JsonValue.CreateBooleanValue(_snapshotsOn);
+            o["audioOn"] = JsonValue.CreateBooleanValue(_audioOn);
+            o["keyframeSec"] = JsonValue.CreateNumberValue(_svKeyframeSec);
+            o["wifiIp"] = JsonValue.CreateStringValue(_ips.Count > 0 ? _ips[0] : "");
+            o["rtspViewersWifi"] = JsonValue.CreateNumberValue(_server.ViewerCount(false));
+            o["rtspViewersUsb"] = JsonValue.CreateNumberValue(_server.ViewerCount(true));
+            o["usbSeen"] = JsonValue.CreateBooleanValue(_server.ViewerCount(true) > 0 || (DateTime.Now - _api.LastUsbRequest).TotalSeconds < 30);
+            o["usbCable"] = JsonValue.CreateBooleanValue(OnExternalPower(_battery));
             // status block
             var cm = _camera;
             var br = TryBattery();
@@ -2001,6 +2012,21 @@ namespace W10MSecurityCam
                     else if (a == "restart") { if (on) await ToggleStreamingAsync(); await ToggleStreamingAsync(); }
                 });
                 done.Add("stream " + a);
+            }
+            if (form.TryGetValue("autostart", out var ast))
+            {
+                bool on = IsOn(ast);
+                await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => AutoStartToggle.IsOn = on); // its handler saves
+                done.Add("start streaming when the app opens " + (on ? "on" : "off"));
+            }
+            if (form.TryGetValue("keyframe", out var kfs) && double.TryParse(kfs, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var kfSec))
+            {
+                await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+                {
+                    for (int i = 0; i < KeyframeBox.Items.Count; i++)
+                        if (KeyframeBox.Items[i] is KeyframeOption ko && Math.Abs(ko.Seconds - kfSec) < 0.01) { KeyframeBox.SelectedIndex = i; break; }
+                });
+                done.Add("keyframe every " + kfSec + " s (applies at the next stream start)");
             }
             if (form.TryGetValue("udp", out var udp))
             {

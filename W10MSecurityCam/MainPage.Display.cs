@@ -112,11 +112,14 @@ namespace W10MSecurityCam
         /// The three switches as plain fields, for the web thread (/camera/state): a ToggleSwitch can only be read on the
         /// UI thread. Refreshed from the settings load, every display change and once a second.
         /// </summary>
-        private volatile bool _svPreview, _svKeepPreview, _svPowerSave = true;
+        private volatile bool _svPreview, _svKeepPreview, _svPowerSave = true, _svAutoStart = true;
+        private double _svKeyframeSec = 2;
         private void SnapshotDisplaySwitches()
         {
             if (PreviewToggle == null || KeepPreviewToggle == null || PowerSaveToggle == null) return; // the XAML still loads (the screensaver handler fires early)
             _svPreview = PreviewToggle.IsOn; _svKeepPreview = KeepPreviewToggle.IsOn; _svPowerSave = PowerSaveToggle.IsOn;
+            if (AutoStartToggle != null) _svAutoStart = AutoStartToggle.IsOn;
+            if (KeyframeBox != null && KeyframeBox.SelectedItem is KeyframeOption kfo) _svKeyframeSec = kfo.Seconds;
         }
 
         private void DisplayTick()
