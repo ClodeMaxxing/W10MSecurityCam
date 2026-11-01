@@ -79,7 +79,7 @@ namespace W10MSecurityCam.Streaming
                     {
                         string refused = RefuseForeignPost(r);
                         if (refused != null) return Reply(403, "Forbidden", "text/plain", refused);
-                        var form = ParseForm(r.Body.Length > 0 ? r.Body : r.Query);
+                        var form = ParseForm(r.Body); // changes only in the body, never in the URL
                         string result = await ApplyConfig(form);
                         return Reply(200, "OK", "text/plain; charset=utf-8", result + "\n\n" + GetConfig());
                     }
@@ -114,7 +114,7 @@ namespace W10MSecurityCam.Streaming
                     return Reply(403, "Forbidden", "text/plain", "Changes need the login\n");
                 string refused = RefuseForeignPost(r);
                 if (refused != null) return Reply(403, "Forbidden", "text/plain", refused);
-                var all = ParseForm(r.Body.Length > 0 ? r.Body : r.Query);
+                var all = ParseForm(r.Body); // changes only in the body, never in the URL
                 var only = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 foreach (var k in new[] { "camera", "focus", "exposure", "wb", "format", "bitrate", "highbw", "powersave", "stream", "engine", "user", "password", "savepower", "saveois", "savefocus", "probe", "torch" })
                     if (all.TryGetValue(k, out var v)) only[k] = v;
