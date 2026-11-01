@@ -219,7 +219,9 @@ function send(body){
  .catch(function(e){$('msg').textContent=e.message})
 }
 function load(){
- fetch('/camera/state').then(function(r){return r.json()}).then(function(j){st=j;render()}).catch(function(){});
+ fetch('/camera/state').then(function(r){return r.json()}).then(function(j){
+  if(st&&st.version&&j.version&&j.version!==st.version){location.reload();return} // the app was updated: get its page
+  st=j;render()}).catch(function(){});
 }
 function later(body){clearTimeout(t);t=setTimeout(function(){send(body)},400)}
 $('loginb').onclick=function(){location.href='/login'};
