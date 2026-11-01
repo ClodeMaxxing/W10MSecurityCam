@@ -971,7 +971,7 @@ namespace W10MSecurityCam
                 bool ok = _tuning.TorchSupported && streaming && !_protect;
                 TorchToggle.IsOn = _torchWanted;
                 TorchToggle.IsEnabled = ok || _torchWanted;
-                TorchNote.Text = _protect ? "The phone overheated: the flashlight stays locked until charging resumes." : _camera == null || !_tuning.TorchSupported && streaming ? (_camera == null ? "" : "This camera has no flashlight control.")
+                TorchNote.Text = _protect ? "Locked by heat protection." : _camera == null || !_tuning.TorchSupported && streaming ? (_camera == null ? "" : "This camera has no flashlight control.")
                     : !streaming ? "Start the stream to use the flashlight."
                     : "Switches off by itself after 30 seconds.";
             }
@@ -1343,8 +1343,10 @@ namespace W10MSecurityCam
             _heatWarn = paused || _protect;
             // A brief pause is only a caution (amber); 20 s of it is hot (red), as on the Temp badge (HeatBadge).
             _heat = _protect ? "Heat protection on" : _pausedSecs >= 20 ? "Hot (charging paused)" : paused ? "Charging paused" : "Healthy";
-            _heatDetail = _protect ? "Heat protection is on: the stream is lowered to 1080p / 6 Mbps, power-saving options are forced on and the flashlight is unavailable until charging resumes."
-                : paused ? "Charging has paused although the charger is fine: the battery is probably too hot. Let the phone cool down." : "";
+            // The usual cause is a power source that can't keep up (a PC USB port, a small adapter): the phone then also
+            // draws on its battery, the battery heats, and Windows pauses charging. So the messages point at the charger too.
+            _heatDetail = _protect ? "Heat protection: charging paused because the phone is hot - usually the charger can't keep up (a PC USB port or a small adapter; use 2 A or more). Video is 1080p / 6 Mbps and power saving is on until it charges normally again."
+                : paused ? "Charging has paused: the phone is probably hot - usually the charger can't keep up (a PC USB port or a small adapter; use 2 A or more)." : "";
         }
 
         // ---- Heat protection: when charging stalls on a good charger, force every power-saving option on and lock the
@@ -1482,14 +1484,13 @@ namespace W10MSecurityCam
                 sb.Append("   Memory: ").Append(Math.Round(AppMemory() / 1048576.0)).Append(" MB");
                 sb.Append("\nUp: ").Append(FormatUptime(DateTime.Now - _appStarted));
                 sb.Append("\nTemperature: ").Append(_heat);
-                if (_protect) sb.Append("\nHeat protection: video lowered, power saving forced on, flashlight locked until charging resumes");
+                if (_protect) sb.Append("\nHeat protection on");
                 sb.Append("\n").Append(_power.PowerText());
                 if (_power.CpuText().Length > 0) sb.Append("\n").Append(_power.CpuText());
                 sb.Append("\nBattery Saver: ").Append(BatterySaverText());
                 StatusText.Text = sb.ToString();
-                string alert = _protect ? "THERMAL RECOVERY MODE: video lowered and power saving forced on until charging resumes"
-                    : _heatWarn ? "Temperature unstable: charging has paused, the phone is probably hot"
-                    : ""; // battery and charger state show in the battery tile
+                // the one full heat message (the charger hint included); the sections only say "Heat protection: ..."
+                string alert = _heatWarn ? _heatDetail : ""; // battery and charger state show in the battery tile
                 AlertText.Text = alert;
                 AlertText.Visibility = alert.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
                 StatusText.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(

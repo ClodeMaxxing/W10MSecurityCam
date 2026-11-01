@@ -73,7 +73,7 @@ button.tog.on{background:#18452b;color:#39ff14;border-color:#39ff14;box-shadow:0
 <h2>Status</h2>
 <div class='row'><div id='stat'>loading...</div><div id='warn'></div></div>
 <h2>Video</h2>
-<div class='bad' id='ta3' style='display:none;font-weight:bold'>THERMAL RECOVERY MODE: video lowered to 1080p / 6 Mbps until charging resumes</div>
+<div class='bad' id='ta3' style='display:none;font-weight:bold'>Heat protection: 1080p / 6 Mbps</div>
 <div class='row'>
 <div class='vrow'><select id='fmt'></select><select id='br'></select>
 <button id='hb' class='tog' data-tip='High bandwidth mode unlocks bitrates above 24 Mbps. Needs 5 GHz Wi-Fi or a USB-C connection; on 2.4 GHz the stream drops frames.'>High BW</button></div>
@@ -91,11 +91,11 @@ button.tog.on{background:#18452b;color:#39ff14;border-color:#39ff14;box-shadow:0
 <input type='range' id='es' min='0' max='100' step='0.5'></div>
 <div class='row'><div class='head'><span id='wl'>White balance</span><label><input type='checkbox' id='wa'> Auto</label></div>
 <input type='range' id='ws' min='2000' max='8000' step='100'></div>
-<div class='bad' id='ta1' style='display:none;font-weight:bold'>THERMAL RECOVERY MODE: flashlight unavailable until charging resumes</div>
+<div class='bad' id='ta1' style='display:none;font-weight:bold'>Heat protection: flashlight locked</div>
 <div class='row'><div class='head'><span><span id='tl'>Flashlight</span><i class='tip' data-tip='Only while streaming. Switches off by itself after 30 seconds: the LED heats the phone quickly and this phone cannot dim it.'>i</i></span><label><input type='checkbox' id='tt'> On</label></div>
 <div class='sub' id='tinfo'></div></div>
 <h2>Power</h2>
-<div class='bad' id='ta2' style='display:none;font-weight:bold'>THERMAL RECOVERY MODE: unavailable until charging resumes - power saving is forced on</div>
+<div class='bad' id='ta2' style='display:none;font-weight:bold'>Heat protection: power saving forced on</div>
 <div class='row'><div class='btnrow'><button id='ps'>Black out the phone screen</button><i class='tip' id='pinfo' data-tip='x'>i</i></div></div>
 <div class='row'><label><input type='checkbox' id='sall'> Power-saving camera features</label><i class='tip' data-tip='Less processing and heat: stabilization off for a fixed mount, and focus held once it has settled. Untick to choose each one. Changing stabilization restarts the stream once.'>i</i>
 <div id='spanel' style='margin-left:18px'>
@@ -164,7 +164,7 @@ function render(){
   +""<div class='grid'>""
   +tile('Battery',st.battery==null?'n/a':st.battery+'% '+st.batteryStatus.toLowerCase(),st.batteryFalling,batt)
   +tile('Wi-Fi',st.wifiBars==null?'n/a':wb+' of 4',st.wifiBars!=null&&wb<2,bars)
-  +tile('Temp','',false,badge(st.heatBadge||st.heat||'n/a',st.heatLevel==2?'bad':st.heatLevel==1?'mid':''),st.heatDetail||'Healthy while the phone charges normally. Unstable when Windows pauses charging on a good charger, which it does when the battery is hot.')
+  +tile('Temp','',false,badge(st.heatBadge||st.heat||'n/a',st.heatLevel==2?'bad':st.heatLevel==1?'mid':''),st.heatDetail||'Windows gives apps no temperature. Hot means charging has paused on a good charger for 20 s, which Windows does when the battery is hot.')
   +tile('CPU phone',cpuP+'%',false,meter(cpuP,cpuP>70?'mid':''),'Whole phone. The camera, encoder and Wi-Fi do most of their work outside the CPU.')
   +tile('CPU app',cpuA+'%',false,meter(cpuA,cpuA>50?'mid':''))
   +tile('Memory',st.memoryMB+' MB',mp>80,meter(mp,mp>80?'low':mp>60?'mid':''),'App memory, of '+ml+' MB allowed.')
@@ -188,7 +188,7 @@ function render(){
  $('sf').disabled=$('sall').disabled=!st.canWrite;
  $('ta1').style.display=$('ta2').style.display=$('ta3').style.display=st.protect?'block':'none';
  $('fmt').disabled=$('br').disabled=$('hb').disabled=!st.canWrite||st.protect;
- if(st.protect){$('sall').disabled=$('so').disabled=$('sf').disabled=$('ps').disabled=$('tt').disabled=true;$('tinfo').textContent='The phone overheated. The stream is lowered, power saving is forced on and the flashlight is locked until charging resumes.'}
+ if(st.protect){$('sall').disabled=$('so').disabled=$('sf').disabled=$('ps').disabled=$('tt').disabled=true;$('tinfo').textContent='Locked by heat protection.'}
  $('sol').textContent='Stabilization off (fixed mount)'+(st.oisSupported?'':' - not offered by this camera');
  $('pinfo').setAttribute('data-tip','Brightness to zero, black screen and preview off while streaming. Windows Battery Saver: '+st.batterySaver+' (an app cannot switch it on; use the phone Settings > Battery).');
  $('all').checked=st.focusAuto&&st.exposureAuto&&st.wbAuto;

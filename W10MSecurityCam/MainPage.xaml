@@ -199,7 +199,7 @@
 
                 <Button Style="{StaticResource FoldButton}" Tag="VideoPanel|VIDEO" Content="VIDEO  &#x25B8;" Click="Fold_Click" />
                 <StackPanel x:Name="VideoPanel" Visibility="Collapsed">
-                    <TextBlock x:Name="VideoAlert" Text="THERMAL RECOVERY MODE: VIDEO LOWERED TO 1080P / 6 MBPS UNTIL CHARGING RESUMES" Foreground="#FF5555" FontWeight="Bold" FontSize="12" TextWrapping="Wrap" Visibility="Collapsed" Margin="0,2,0,2" />
+                    <TextBlock x:Name="VideoAlert" Text="Heat protection: 1080p / 6 Mbps" Foreground="#FF5555" FontWeight="Bold" FontSize="12" TextWrapping="Wrap" Visibility="Collapsed" Margin="0,2,0,2" />
                     <ComboBox x:Name="ResolutionBox" Header="Resolution" SelectionChanged="Setting_Changed" HorizontalAlignment="Stretch" Margin="0,0,0,6" />
                     <ComboBox x:Name="BitrateBox" Header="Bitrate" SelectionChanged="Setting_Changed" HorizontalAlignment="Stretch" Margin="0,0,0,6" />
                     <ToggleSwitch x:Name="HighBwToggle" Header="High bandwidth (over 24 Mbps)" IsOn="False" Toggled="HighBwToggle_Toggled" />
@@ -239,14 +239,14 @@
                         </Grid>
                         <Slider x:Name="WbSlider" Minimum="2000" Maximum="8000" StepFrequency="100" Margin="0,-6,0,0" ValueChanged="TuningSlider_ValueChanged" />
                     </StackPanel>
-                    <TextBlock x:Name="TorchAlert" Text="THERMAL RECOVERY MODE: FLASHLIGHT UNAVAILABLE UNTIL CHARGING RESUMES" Foreground="#FF5555" FontWeight="Bold" FontSize="12" TextWrapping="Wrap" Visibility="Collapsed" Margin="0,2,0,2" />
+                    <TextBlock x:Name="TorchAlert" Text="Heat protection: flashlight locked" Foreground="#FF5555" FontWeight="Bold" FontSize="12" TextWrapping="Wrap" Visibility="Collapsed" Margin="0,2,0,2" />
                     <ToggleSwitch x:Name="TorchToggle" Header="Flashlight" IsOn="False" Toggled="TorchToggle_Toggled" />
                     <TextBlock x:Name="TorchNote" Text="" Foreground="#7F9A86" FontSize="12" TextWrapping="Wrap" Margin="0,-4,0,4" />
                 </StackPanel>
 
                 <Button Style="{StaticResource FoldButton}" Tag="PowerPanel|POWER" Content="POWER  &#x25B8;" Click="Fold_Click" />
                 <StackPanel x:Name="PowerPanel" Visibility="Collapsed">
-                    <TextBlock x:Name="PowerAlert" Text="THERMAL RECOVERY MODE: POWER SAVING IS FORCED ON UNTIL CHARGING RESUMES" Foreground="#FF5555" FontWeight="Bold" FontSize="12" TextWrapping="Wrap" Visibility="Collapsed" Margin="0,2,0,2" />
+                    <TextBlock x:Name="PowerAlert" Text="Heat protection: power saving forced on" Foreground="#FF5555" FontWeight="Bold" FontSize="12" TextWrapping="Wrap" Visibility="Collapsed" Margin="0,2,0,2" />
                     <ToggleSwitch x:Name="PowerSaveToggle" Header="Black screen while streaming" IsOn="True" Toggled="PowerSaveToggle_Toggled" />
                     <TextBlock Text="Tap the black screen to read the status for 15 s. Show camera picture lights it for 60 s (the stream restarts briefly to start and stop the picture). The start/stop chirp follows the phone's Ringer + notifications volume." Foreground="#7F9A86" FontSize="12" TextWrapping="Wrap" Margin="0,-4,0,6" />
                     <CheckBox x:Name="SaveAllCheck" Content="Power-saving camera features" IsChecked="True"
