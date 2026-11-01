@@ -159,7 +159,7 @@ namespace W10MSecurityCam
         /// </summary>
         private void UpdateDisplayButtons(bool previewing)
         {
-            if (PreviewBar == null || ScreensaverBar == null) return; // the XAML still loads
+            if (PreviewBar == null || ScreensaverBar == null || KeepPreviewToggle == null) return; // the XAML still loads
             var lit = Brush(0x39, 0xFF, 0x14); var dark = Brush(0x16, 0x30, 0x1E);
             var litText = Brush(0x39, 0xFF, 0x14); var dimText = Brush(0x7F, 0xAE, 0x86);
             bool on = previewing || _phoneAdjusting || PreviewToggle.IsOn || (KeepPreviewToggle.IsOn && !_protect);
@@ -279,7 +279,7 @@ namespace W10MSecurityCam
 
         private async void PowerSaveToggle_Toggled(object sender, RoutedEventArgs e)
         {
-            if (_loadingDisplayUi) return;
+            if (_loadingDisplayUi || !_uiReady) return; // switches with IsOn="True" fire during XAML load, before later controls exist
             if (!_protect) _settings.Values["PowerSave"] = PowerSaveToggle.IsOn; // forced by heat protection: not saved
             if (PowerSaveToggle.IsOn)
             {
@@ -294,7 +294,7 @@ namespace W10MSecurityCam
 
         private async void PreviewToggle_Toggled(object sender, RoutedEventArgs e)
         {
-            if (_loadingDisplayUi) return;
+            if (_loadingDisplayUi || !_uiReady) return; // switches with IsOn="True" fire during XAML load, before later controls exist
             _settings.Values["Preview"] = PreviewToggle.IsOn;
             Log("Preview " + (PreviewToggle.IsOn ? "on" : "off"));
             if (!PreviewToggle.IsOn) { await TurnPreviewOffAsync(); return; } // off means no picture at all, now
@@ -305,7 +305,7 @@ namespace W10MSecurityCam
 
         private async void KeepPreviewToggle_Toggled(object sender, RoutedEventArgs e)
         {
-            if (_loadingDisplayUi) return;
+            if (_loadingDisplayUi || !_uiReady) return; // switches with IsOn="True" fire during XAML load, before later controls exist
             if (!_protect) _settings.Values["KeepPreview"] = KeepPreviewToggle.IsOn;
             Log("Preview behind the black screen " + (KeepPreviewToggle.IsOn ? "on (costs CPU and heat; a tap on the black screen shows the picture at once)" : "off"));
             await ApplyDisplayAsync(byHand: true);
