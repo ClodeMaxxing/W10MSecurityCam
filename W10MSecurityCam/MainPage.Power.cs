@@ -47,6 +47,7 @@ namespace W10MSecurityCam
         private Tuple<string, int> HeatBadge()
         {
             if (_protect) return Tuple.Create("Protect", 2);
+            if (HotUnprotected) return Tuple.Create("HOT, no protection", 2);
             if (_pausedSecs >= 20) return Tuple.Create("Hot", 2);
             if (_pausedSecs > 0) return Tuple.Create("Paused", 1);
             return Tuple.Create("Healthy", 0);

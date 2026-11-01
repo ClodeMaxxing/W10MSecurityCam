@@ -195,7 +195,7 @@ function render(){
  $('so').checked=st.saveOis;$('sf').checked=st.saveFocus;
  $('so').disabled=!st.canWrite||!st.oisSupported;
  $('sf').disabled=$('sall').disabled=!st.canWrite;
- $('ta1').style.display=$('ta2').style.display=$('ta3').style.display=st.protect?'block':'none';
+ $('ta1').style.display=$('ta3').style.display=st.protect?'block':'none';var hot=!st.protect&&!st.heatProtect&&st.heatLevel>=2;$('ta2').textContent=st.protect?'Heat protection: power saving forced on':'HOT and heat protection is off: nothing is done about it - the battery drains on a weak charger';$('ta2').style.display=st.protect||hot?'block':'none';
  $('fmt').disabled=$('br').disabled=$('hb').disabled=!st.canWrite||st.protect;
  if(st.protect){$('sall').disabled=$('so').disabled=$('sf').disabled=$('ps').disabled=$('tt').disabled=true;$('tinfo').textContent='Locked by heat protection.'}
  $('sol').textContent='Stabilization off (fixed mount)'+(st.oisSupported?'':' - not offered by this camera');

@@ -1164,12 +1164,26 @@ namespace W10MSecurityCam
             else if (_protectRestartOwed && !_protectBusy && !_busy) { var _r = RestartStreamForProtectionAsync(); }
             _heatWarn = paused || _protect;
             // A brief pause is only a caution (amber); 20 s of it is hot (red), as on the Temp badge (HeatBadge).
-            _heat = _protect ? "Heat protection on" : _pausedSecs >= 20 ? "Hot (charging paused)" : paused ? "Charging paused" : "Healthy";
+            // Hot with the Heat protection switch off is its own warning: nothing is being done about it.
+            bool hotUnprotected = HotUnprotected;
+            _heat = _protect ? "Heat protection on" : hotUnprotected ? "HOT - heat protection off" : _pausedSecs >= 20 ? "Hot (charging paused)" : paused ? "Charging paused" : "Healthy";
             // The usual cause is a power source that can't keep up (a PC USB port, a small adapter): the phone then also
             // draws on its battery, the battery heats, and Windows pauses charging. So the messages point at the charger too.
             _heatDetail = _protect ? "Heat protection: charging paused because the phone is hot - usually the charger can't keep up (a PC USB port or a small adapter; use 2 A or more). Video is 1080p / 6 Mbps and power saving is on until it charges normally again."
+                : hotUnprotected ? "The phone is hot (charging has paused) and heat protection is OFF, so nothing is done about it: full video and the screen as set. Switch heat protection on under Power, lower the video yourself, or use a 2 A charger - on a weak charger the battery drains until the phone dies."
                 : paused ? "Charging has paused: the phone is probably hot - usually the charger can't keep up (a PC USB port or a small adapter; use 2 A or more)." : "";
+            if (hotUnprotected != _hotUnprotectedShown)
+            {
+                _hotUnprotectedShown = hotUnprotected;
+                if (hotUnprotected) { Log("HOT with heat protection OFF: nothing is done about it (switch it on under Power, or use a 2 A charger)"); PlayChime(false); var buzz = BuzzAsync(2); }
+                else Log("Charging again: the phone has cooled (heat protection still off)");
+                UpdateProtectUi();
+            }
         }
+
+        /// <summary>Hot (20 s of paused charging on a good charger) while the Heat protection switch is off.</summary>
+        private bool HotUnprotected => !_protect && !_heatProtectOn && _pausedSecs >= 20;
+        private bool _hotUnprotectedShown;
 
         // ---- Heat protection: when charging stalls on a good charger, force every power-saving option on and lock the
         // flashlight; put the person's own settings back once charging resumes. The forced values are never written to the
@@ -1215,6 +1229,8 @@ namespace W10MSecurityCam
             _settings.Values["HeatProtect"] = on;
             if (HeatProtectToggle.IsOn != on) { _loadingHeatUi = true; try { HeatProtectToggle.IsOn = on; } finally { _loadingHeatUi = false; } }
             Log("Heat protection " + (on ? "on" : "OFF (the phone will not slow down when hot; on a weak charger the battery drains)"));
+            if (!on && _pausedSecs >= 20) { _hotUnprotectedShown = false; } // already hot: the HOT warning fires on the next tick
+            UpdateProtectUi();
         }
         private bool _pOis, _pFocus;
         private string _pFormatKey = "", _pBitrateKey = "";
@@ -1309,7 +1325,10 @@ namespace W10MSecurityCam
         private void UpdateProtectUi()
         {
             bool free = !_protect;
-            TorchAlert.Visibility = PowerAlert.Visibility = _protect ? Visibility.Visible : Visibility.Collapsed;
+            TorchAlert.Visibility = _protect ? Visibility.Visible : Visibility.Collapsed;
+            // the Power alert: protection running, or hot with the switch off (nothing is being done)
+            PowerAlert.Text = _protect ? "Heat protection: power saving forced on" : "HOT and heat protection is off: nothing is done about it - the battery drains on a weak charger";
+            PowerAlert.Visibility = _protect || HotUnprotected ? Visibility.Visible : Visibility.Collapsed;
             SaveAllCheck.IsEnabled = free;
             SaveOisCheck.IsEnabled = free && (_tuning.OisSupported || _camera == null);
             SaveFocusCheck.IsEnabled = free;
