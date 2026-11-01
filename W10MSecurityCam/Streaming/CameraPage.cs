@@ -60,7 +60,7 @@ a{color:#9cf0b0}
 .bar:before{content:'';position:absolute;left:0;top:9px;bottom:9px;width:4px;border-radius:0 2px 2px 0;background:#16301e}
 .bar .n{font-size:14px;font-weight:500;color:#d8f5dc}.bar .s{font-size:11px;letter-spacing:.5px;color:#7fae86;font-family:Consolas,'Cascadia Mono',monospace}
 .bar.on:before{background:#39ff14}.bar.on .s{color:#39ff14}
-.bar.dis,.sw.dis{opacity:.45;pointer-events:none}
+.bar.dis,.sw.dis{opacity:.45}.pk.dis{opacity:.5}
 .dr{background:#071109;border:1px solid #1f3a26;border-radius:8px;margin:0 0 6px}
 .dh{display:flex;justify-content:space-between;align-items:center;padding:10px;background:#0a160d;color:#a8f0b0;font-weight:600;letter-spacing:1px;font-size:13px;cursor:pointer;user-select:none;border-radius:7px 7px 0 0}
 .dh.c{border-radius:7px}
@@ -74,7 +74,7 @@ a{color:#9cf0b0}
 .fld{border:1px solid #142a1a;border-radius:6px;background:#0a160d;padding:6px 9px 7px;margin:0 0 4px}
 .fld b{display:block;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#6f8f77;font-weight:600}
 .fld code{display:block;font-family:Consolas,'Cascadia Mono',monospace;font-size:12px;color:#cfffd2;margin-top:3px;word-break:break-all;user-select:all}
-.pk{position:relative;cursor:pointer;user-select:none}.pk.open{border-color:#39ff14;z-index:30}.pk.dis{opacity:.5;pointer-events:none}
+.pk{position:relative;cursor:pointer;user-select:none}.pk.open{border-color:#39ff14;z-index:30}
 .pk .pv{display:flex;justify-content:space-between;align-items:center;font-family:Consolas,'Cascadia Mono',monospace;font-size:14px;color:#cfffd2;margin-top:3px}
 .pk .pv i{font-style:normal;color:#3fbf5f}
 .pk .list{display:none;position:absolute;left:-1px;right:-1px;top:100%;margin-top:3px;background:#071109;border:1px solid #39ff14;border-radius:6px;z-index:20;overflow:hidden;max-height:320px;overflow-y:auto;box-shadow:0 8px 20px rgba(0,0,0,.7)}
@@ -188,7 +188,7 @@ function pick(id,vals,txt,cur,dis){
  vals.forEach(function(v){var o=document.createElement('div');o.textContent=txt(v);if(String(v)===String(cur))o.className='a';
   o.onclick=function(ev){ev.stopPropagation();e.className='fld pk';var k=e.getAttribute('data-k');if(k==='keyframe')send('keyframe='+v);else video(k,v)};l.appendChild(o)})
 }
-document.addEventListener('click',function(ev){var ps=document.querySelectorAll('.pk');for(var i=0;i<ps.length;i++){var p=ps[i];if(p.contains(ev.target)){if(p.className.indexOf('dis')<0)p.className=p.className.indexOf('open')>=0?'fld pk':'fld pk open'}else p.className=p.className.replace(' open','')}});
+document.addEventListener('click',function(ev){var ps=document.querySelectorAll('.pk');for(var i=0;i<ps.length;i++){var p=ps[i];if(p.contains(ev.target)){if(p.className.indexOf('dis')>=0){locked();return}p.className=p.className.indexOf('open')>=0?'fld pk':'fld pk open'}else p.className=p.className.replace(' open','')}});
 function sw(id,on,dis,txt){var e=$(id);e.className='sw'+(on?' on':'')+(dis?' dis':'');e.lastElementChild.textContent=txt||(on?'ON':'OFF')}
 function bar(id,on,dis,txt){var e=$(id);e.className='bar'+(on?' on':'')+(dis?' dis':'');e.lastElementChild.textContent=txt}
 function svc(id,cls,addr,note){$(id).className='svc'+(cls?' '+cls:'');$(id+'a').textContent=addr;$(id+'n').textContent=note||''}
@@ -280,7 +280,9 @@ function labels(){
  $('wv').textContent=st.wbAuto?'auto':$('ws').value+' K';
  $('wn').textContent=st.wbAuto?st.wb+' K now':'';
 }
-function send(body){
+// view only (no login yet): any tap on a control goes to the login page instead of doing nothing
+function locked(){if(st&&st.canWrite)return false;$('msg').textContent='View only - log in to change settings';location.href='/login';return true}
+function send(body){if(locked())return;
  touched=Date.now();
  fetch('/camera/set',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','X-Requested-With':'W10MSecurityCam'},body:body})
  .then(function(r){if(r.status==401){location.href='/login';throw new Error('Login needed')}return r.ok?r.json():r.text().then(function(x){throw new Error(x)})})
@@ -295,7 +297,7 @@ function load(){
 }
 function later(body){clearTimeout(t);t=setTimeout(function(){send(body)},400)}
 $('loginb').onclick=function(){location.href='/login'};
-$('srow').onclick=function(){send('stream='+(st&&st.streaming?'stop':'start'))};
+$('srow').onclick=function(){if(!st||st.canWrite)send('stream='+(st&&st.streaming?'stop':'start'))};
 $('bpv').onclick=function(){var on=st&&(st.previewing||st.preview||st.keepPreview);send('preview='+(on?'off':'on'))};
 $('bss').onclick=function(){send('powersave='+(st&&st.powerSave?'off':'on'))};
 $('btt').onclick=function(){send('torch='+(st&&st.torchOn?'off':'on'))};
