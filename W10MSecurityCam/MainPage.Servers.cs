@@ -126,7 +126,56 @@ namespace W10MSecurityCam
             o["statsOn"] = JsonValue.CreateBooleanValue(_statsOn);
         }
 
+        // ---------------------------------------------------------------- stats samples (for /stats)
+
+        private const int StatsKeep = 1440; // 12 hours at one sample every 30 s
+        private readonly Queue<string> _statRows = new Queue<string>();
+        private readonly object _statLock = new object();
+        private DateTime _lastStatSample = DateTime.MinValue;
+
+        private static string F(double? v, string fmt = "0.##") => v.HasValue ? v.Value.ToString(fmt, CultureInfo.InvariantCulture) : "";
+
+        /// <summary>Once a second (UpdateStats): one row every 30 s, only while the stats page is on. The columns are W10MWebCam's.</summary>
+        private void SampleStats()
+        {
+            if (!_statsOn || (DateTime.Now - _lastStatSample).TotalSeconds < 30) return;
+            _lastStatSample = DateTime.Now;
+            try
+            {
+                var r = _battery;
+                bool charging = IsCharging(r);
+                bool streaming = _camera != null && _camera.IsStreaming;
+                // time,ok,version,streaming,fps,mbps,viewers,format,bitrate,latency_ms,battery_pct,charging,net_w,draw_w,
+                // heat_warn,protect,cpu_phone,cpu_app,memory_mb,wifi_bars,uptime_s,safe
+                string row = string.Join(",", new[]
+                {
+                    DateTime.Now.ToString("s", CultureInfo.InvariantCulture), "1", AppVersion,
+                    streaming ? "1" : "0",
+                    streaming ? F(_camera.Fps, "0.0") : "", streaming ? F(_camera.Mbps, "0.0") : "",
+                    _server.ClientCount.ToString(CultureInfo.InvariantCulture),
+                    _currentFormatKey ?? "", _currentBitrateKey ?? "",
+                    streaming && _camera.LastLatencyMs >= 0 ? _camera.LastLatencyMs.ToString(CultureInfo.InvariantCulture) : "",
+                    F(Percent(r)), charging ? "1" : "0",
+                    F(_power.NetWatts), charging ? "" : F(_power.DrawWatts),
+                    _pausedSecs >= 20 ? "1" : "0", _protect ? "1" : "0",
+                    F(_power.SysCpuPct, "0"), F(_power.ProcCpuPct, "0"),
+                    F(AppMemory() / 1048576.0, "0"), WifiBars() >= 0 ? WifiBars().ToString(CultureInfo.InvariantCulture) : "",
+                    F((DateTime.Now - _appStarted).TotalSeconds, "0"),
+                    _camera != null && !_camera.UseNativeSink ? "1" : "0"
+                }.Select(x => (x ?? "").Replace(",", ";").Replace("\"", ""))); // a comma inside a field would shift the columns
+                lock (_statLock)
+                {
+                    _statRows.Enqueue(row);
+                    while (_statRows.Count > StatsKeep) _statRows.Dequeue();
+                }
+            }
+            catch (Exception ex) { Log("Stats sample: " + ex.Message); }
+        }
+
         /// <summary>The rows for the stats page (network thread).</summary>
-        private string StatsRows() => "";
+        private string StatsRows()
+        {
+            lock (_statLock) return string.Join(",\n", _statRows.Select(x => "'" + x.Replace("'", "") + "'"));
+        }
     }
 }

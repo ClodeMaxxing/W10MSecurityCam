@@ -74,6 +74,11 @@ namespace W10MSecurityCam.Streaming
                 if (path == "/log")
                     return LogEnabled ? Reply(200, "OK", "text/plain; charset=utf-8", GetLog(), "Cache-Control: no-store\r\n") : SwitchedOff("log page");
 
+                if (path == "/stats")
+                    return StatsEnabled
+                        ? Reply(200, "OK", "text/html; charset=utf-8", StatsPage.Html.Replace("/*ROWS*/", GetStatsRows()), "Cache-Control: no-store\r\n")
+                        : SwitchedOff("stats page");
+
                 if (path == "/status")
                     return Reply(200, "OK", "application/json", GetStatusJson());
 

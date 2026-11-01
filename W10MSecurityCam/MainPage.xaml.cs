@@ -683,6 +683,7 @@ namespace W10MSecurityCam
             int tick = _statsTick++;
             _battery = TryBattery();
             UpdatePowerFlags();
+            SampleStats();
             if ((DateTime.Now - _appStarted).TotalSeconds > 20) MarkLaunchHealthy();
             // a preview left running behind the black screen (its stop restart was skipped while busy) is stopped on a later tick
             if (!_blackedOut) UpdatePreviewText();
