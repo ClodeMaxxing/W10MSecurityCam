@@ -1668,6 +1668,32 @@ namespace W10MSecurityCam
             int bars = WifiBars();
             o["wifiSignalBars"] = bars >= 0 ? JsonValue.CreateNumberValue(bars) : JsonValue.CreateNullValue();
             o["time"] = JsonValue.CreateStringValue(DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz"));
+            // The same names as W10MWebCam's /status (the older names above stay), so one Soak-Monitor serves all three apps.
+            o["version"] = JsonValue.CreateStringValue(AppVersion);
+            o["uptime"] = o["uptimeSeconds"];
+            o["battery"] = o["batteryPercent"];
+            o["charging"] = JsonValue.CreateBooleanValue(IsCharging(r));
+            o["onExternalPower"] = JsonValue.CreateBooleanValue(OnExternalPower(r));
+            o["latencyMs"] = cam != null && cam.IsStreaming && cam.LastLatencyMs >= 0 ? JsonValue.CreateNumberValue(cam.LastLatencyMs) : JsonValue.CreateNullValue();
+            o["keyframeSec"] = o["keyframeSeconds"];
+            o["wifiBars"] = o["wifiSignalBars"];
+            o["cpuPhone"] = o["cpuPhonePct"];
+            o["cpuApp"] = o["cpuAppPct"];
+            o["charger"] = JsonValue.CreateStringValue(_power.Supply);
+            o["powerText"] = JsonValue.CreateStringValue(_power.PowerText());
+            o["heat"] = JsonValue.CreateStringValue(_heat);
+            var hb = HeatBadge();
+            o["heatBadge"] = JsonValue.CreateStringValue(hb.Item1);
+            o["heatLevel"] = JsonValue.CreateNumberValue(hb.Item2);
+            o["heatWarn"] = JsonValue.CreateBooleanValue(_heatWarn);
+            o["heatDetail"] = JsonValue.CreateStringValue(_heatDetail);
+            o["alert"] = JsonValue.CreateStringValue(_heatWarn ? _heatDetail : "");
+            o["protect"] = JsonValue.CreateBooleanValue(_protect);
+            o["blackout"] = JsonValue.CreateBooleanValue(_blackedOut);
+            o["previewing"] = JsonValue.CreateBooleanValue(cam != null && cam.Previewing);
+            o["torchOn"] = JsonValue.CreateBooleanValue(_torchWanted);
+            o["torchLeftSec"] = JsonValue.CreateNumberValue(_torchWanted ? Math.Max(0, Math.Ceiling((_torchOffAt - DateTime.Now).TotalSeconds)) : 0);
+            AddServerJson(o);
             return o.Stringify();
         }
 
