@@ -118,13 +118,14 @@ namespace W10MSecurityCam
         public MainPage()
         {
             RotateLogFile();
+            StartLogWriter();
             LaunchSelfCheck();
             InitializeComponent();
 
             var v = Package.Current.Id.Version;
             VersionText.Text = "v" + AppVersion;
 
-            Application.Current.UnhandledException += (s, e) => Log("CRASH (unhandled): " + e.Exception);
+            Application.Current.UnhandledException += (s, e) => { Log("CRASH (unhandled): " + e.Exception); FlushLog(); };
             _server.Log = Log;
             _server.Auth.Log = Log;
             _server.Auth.Load();
@@ -846,7 +847,7 @@ namespace W10MSecurityCam
                 _blackedOut = false;
                 BlackoutOverlay.Visibility = Visibility.Collapsed;
             }
-            finally { deferral.Complete(); }
+            finally { FlushLog(); deferral.Complete(); }
         }
 
         private async void OnResuming(object sender, object e)
@@ -2013,8 +2014,13 @@ namespace W10MSecurityCam
 
         // ------------------------------------------------------------------ logging
 
-        private readonly LinkedList<string> _screenLog = new LinkedList<string>();
+        private readonly LinkedList<string> _screenLog = new LinkedList<string>(); // under _fullLog, like the two below
         private readonly List<string> _fullLog = new List<string>();
+        private List<string> _logPending = new List<string>(); // lines not in the log file yet
+        private bool _screenLogDirty;
+        private int _screenLogQueued;
+        private readonly object _logFileLock = new object();
+        private System.Threading.Timer _logTimer;
         private static readonly string LogFile = System.IO.Path.Combine(ApplicationData.Current.LocalFolder.Path, "log.txt");
         private static readonly string PrevLogFile = System.IO.Path.Combine(ApplicationData.Current.LocalFolder.Path, "log-previous.txt");
         private string _previousSession = "";
@@ -2051,33 +2057,79 @@ namespace W10MSecurityCam
             catch (Exception ex) { _previousSession = "(could not read previous log: " + ex.Message + ")"; }
         }
 
+        /// <summary>
+        /// Called from any thread (the encoder's frame thread and the servers too), so it only queues the line:
+        /// the writer timer puts it in the log file and on the screen within a second.
+        /// </summary>
         private void Log(string message)
         {
             System.Diagnostics.Debug.WriteLine("[W10MSecurityCam] " + message);
-            string line = DateTime.Now.ToString("HH:mm:ss.fff") + " " + message;
+            var now = DateTime.Now;
+            string line = now.ToString("HH:mm:ss.fff") + " " + message;
             lock (_fullLog)
             {
                 _fullLog.Add(line);
                 if (_fullLog.Count > 1000) _fullLog.RemoveRange(0, 200);
+                _logPending.Add(line);
+                _screenLog.AddFirst(now.ToString("HH:mm:ss") + " " + message);
+                if (_screenLog.Count > 25) _screenLog.RemoveLast();
+                _screenLogDirty = true;
+            }
+        }
+
+        /// <summary>Once a second on a pool thread: the queued lines go to the file, then the on-screen log is refreshed.</summary>
+        private void StartLogWriter()
+        {
+            _logTimer = new System.Threading.Timer(_ =>
+            {
+                FlushLog();
+                bool dirty;
+                lock (_fullLog) dirty = _screenLogDirty;
+                if (dirty && System.Threading.Interlocked.Exchange(ref _screenLogQueued, 1) == 0)
+                { var __ = Dispatcher.RunAsync(CoreDispatcherPriority.Low, ShowScreenLog); }
+            }, null, 1000, 1000);
+        }
+
+        /// <summary>Appends the queued lines to the log file: from the writer timer, on suspend and after a crash.</summary>
+        private void FlushLog()
+        {
+            lock (_logFileLock) // taken first so two flushes keep the lines in order
+            {
+                List<string> batch;
+                lock (_fullLog)
+                {
+                    if (_logPending.Count == 0) return;
+                    batch = _logPending;
+                    _logPending = new List<string>();
+                }
                 try
                 {
                     // Keep the on-phone log file small during long sessions: start over above ~2 MB.
-                    if (++_linesSinceSizeCheck >= 500)
+                    _linesSinceSizeCheck += batch.Count;
+                    if (_linesSinceSizeCheck >= 500)
                     {
                         _linesSinceSizeCheck = 0;
                         if (System.IO.File.Exists(LogFile) && new System.IO.FileInfo(LogFile).Length > 2 * 1024 * 1024)
                             System.IO.File.Delete(LogFile);
                     }
-                    System.IO.File.AppendAllText(LogFile, line + "\r\n");
+                    System.IO.File.AppendAllText(LogFile, string.Join("\r\n", batch) + "\r\n");
                 }
                 catch { }
             }
-            var _ = Dispatcher.RunAsync(CoreDispatcherPriority.Low, () =>
+        }
+
+        private void ShowScreenLog()
+        {
+            System.Threading.Volatile.Write(ref _screenLogQueued, 0);
+            if (_blackedOut && BlackoutOverlay.Visibility == Visibility.Visible) return; // nobody sees it: shown when the screen wakes
+            string text;
+            lock (_fullLog)
             {
-                _screenLog.AddFirst(DateTime.Now.ToString("HH:mm:ss") + " " + message);
-                while (_screenLog.Count > 25) _screenLog.RemoveLast();
-                LogText.Text = string.Join("\n", _screenLog);
-            });
+                if (!_screenLogDirty) return;
+                _screenLogDirty = false;
+                text = string.Join("\n", _screenLog);
+            }
+            LogText.Text = text;
         }
     }
 }
