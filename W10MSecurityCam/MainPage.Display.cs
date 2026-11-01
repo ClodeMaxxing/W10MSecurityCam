@@ -238,7 +238,8 @@ namespace W10MSecurityCam
             {
                 // the screensaver ends a picture at once, and the two switches are exclusive: screensaver on = preview off
                 EndPhoneAdjust(); _wakeShowing = false; _wakeTimer?.Stop();
-                if (PreviewToggle.IsOn) { _loadingDisplayUi = true; try { PreviewToggle.IsOn = false; } finally { _loadingDisplayUi = false; } _settings.Values["Preview"] = false; }
+                // (PreviewToggle is null while the XAML still loads: IsOn="True" fires this handler before the Camera section exists)
+                if (PreviewToggle != null && PreviewToggle.IsOn) { _loadingDisplayUi = true; try { PreviewToggle.IsOn = false; } finally { _loadingDisplayUi = false; } _settings.Values["Preview"] = false; }
             }
             Log("Screensaver " + (PowerSaveToggle.IsOn ? "on" : "off"));
             await ApplyDisplayAsync(byHand: true);
@@ -251,7 +252,7 @@ namespace W10MSecurityCam
             Log("Preview on the phone " + (PreviewToggle.IsOn ? "on" : "off"));
             if (!PreviewToggle.IsOn) { await TurnPreviewOffAsync(); return; } // off means no picture at all, now
             // on: the picture must show, so the screensaver goes off (the two switches are exclusive; the person's choice is saved)
-            if (PowerSaveToggle.IsOn && !_protect) { _loadingDisplayUi = true; try { PowerSaveToggle.IsOn = false; } finally { _loadingDisplayUi = false; } _settings.Values["PowerSave"] = false; }
+            if (PowerSaveToggle != null && PowerSaveToggle.IsOn && !_protect) { _loadingDisplayUi = true; try { PowerSaveToggle.IsOn = false; } finally { _loadingDisplayUi = false; } _settings.Values["PowerSave"] = false; }
             await ApplyDisplayAsync(byHand: true);
         }
 
