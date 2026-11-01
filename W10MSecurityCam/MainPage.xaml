@@ -353,20 +353,23 @@
                             <TextBlock x:Name="TitleText" Text="W10MSecurityCam" FontSize="20" FontWeight="SemiBold" Foreground="#E4F5E7" VerticalAlignment="Bottom" />
                             <TextBlock x:Name="VersionText" Text="" FontSize="11" FontWeight="Bold" Foreground="#39FF14" HorizontalAlignment="Right" VerticalAlignment="Top" />
                         </Grid>
-                        <!-- Fixed height (the label and the format pill never wrap), so the card does not jump between states. -->
-                        <Button x:Name="StartButton" Style="{StaticResource BarButton}" Height="46" Margin="-10,0,-10,4" Padding="0,0,10,0" BorderThickness="0,0,0,1" Click="StartButton_Click" IsEnabled="False">
-                            <Grid>
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                <Border x:Name="StreamBar" Style="{StaticResource BarLight}" Margin="0,9,10,9" />
-                                <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                    <Ellipse x:Name="StatusDot" Width="12" Height="12" Fill="#3A1414" Stroke="#5A2020" StrokeThickness="1" VerticalAlignment="Center" Margin="0,0,9,0" />
-                                    <TextBlock x:Name="StateText" Text="START STREAM" FontSize="14" FontWeight="SemiBold" Foreground="#8FB596" CharacterSpacing="60" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                </StackPanel>
-                                <Border x:Name="ResPill" Grid.Column="2" BorderBrush="#2A4A32" BorderThickness="1" CornerRadius="9" Background="#0B1A10" Padding="7,0,7,1" Margin="6,0,0,0" VerticalAlignment="Center">
-                                    <TextBlock x:Name="ResText" Text="-" FontFamily="Consolas" FontSize="11" Foreground="#8FB596" />
-                                </Border>
-                            </Grid>
-                        </Button>
+                        <!-- The stream button: a tall inset bar like the Preview / Screensaver bars (edge light green while streaming, the red
+                             light pulsing, STREAMING / START STREAM, the format pill). Fixed height, so the card never jumps between states. -->
+                        <Border Style="{StaticResource Drawer}" Background="#0F2416" BorderBrush="#1F4A2A" Margin="0,8,0,2">
+                            <Button x:Name="StartButton" Style="{StaticResource BarButton}" Background="Transparent" BorderThickness="0" Height="46" Margin="0" Click="StartButton_Click" IsEnabled="False">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <Border x:Name="StreamBar" Style="{StaticResource BarLight}" Margin="0,9,12,9" />
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Ellipse x:Name="StatusDot" Width="12" Height="12" Fill="#3A1414" Stroke="#5A2020" StrokeThickness="1" VerticalAlignment="Center" Margin="0,0,10,0" />
+                                        <TextBlock x:Name="StateText" Text="START STREAM" FontSize="15" FontWeight="SemiBold" Foreground="#CFE8D4" CharacterSpacing="40" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                    <Border x:Name="ResPill" Grid.Column="2" BorderBrush="#2A4A32" BorderThickness="1" CornerRadius="9" Background="#0B1A10" Padding="7,0,7,1" Margin="6,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock x:Name="ResText" Text="-" FontFamily="Consolas" FontSize="11" Foreground="#8FB596" />
+                                    </Border>
+                                </Grid>
+                            </Button>
+                        </Border>
                         <!-- The stream's own numbers: three tiles above the phone tiles (UpdateStatusCard). -->
                         <Grid Margin="-2,2,-2,0">
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>

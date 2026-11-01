@@ -17,10 +17,10 @@ a{color:#9cf0b0}
 .card{background:#071109;border:1px solid #1f3a26;border-radius:8px;margin:0 0 6px;overflow:hidden}
 .ttl{display:flex;justify-content:space-between;align-items:baseline;padding:8px 10px 6px;background:#050a06;border-bottom:1px solid #1f3a26}
 .ttl b{font-size:20px;font-weight:600;color:#e4f5e7}.ttl i{font-style:normal;color:#39ff14;font-size:11px;font-weight:bold}
-.srow{position:relative;display:flex;gap:9px;align-items:center;height:46px;padding:0 10px 0 16px;background:#0a160d;border-bottom:1px solid #1f3a26;cursor:pointer;user-select:none}
+.srow{position:relative;display:flex;gap:9px;align-items:center;height:46px;padding:0 10px 0 16px;margin:8px;background:#0f2416;border:1px solid #1f4a2a;border-radius:8px;overflow:hidden;cursor:pointer;user-select:none}
 .srow:before{content:'';position:absolute;left:0;top:9px;bottom:9px;width:4px;border-radius:0 2px 2px 0;background:#16301e}
 .srow.on:before{background:#39ff14}
-.srow b{font-weight:600;letter-spacing:1px;font-size:14px;color:#8fb596}.srow.on b{color:#9cf0b0}.srow.hot b{color:#ff6b6b}
+.srow b{font-weight:600;letter-spacing:1px;font-size:15px;color:#cfe8d4}.srow.on b{color:#fff}.srow.hot b{color:#ff6b6b}
 .srow .fmt{margin-left:auto;border:1px solid #2a4a32;border-radius:9px;padding:1px 7px;font-size:11px;color:#8fb596;font-family:Consolas,'Cascadia Mono',monospace;background:#0b1a10}
 .srow.on .fmt{border-color:#39ff14;color:#cfffd2}
 .srow.busy{opacity:.5;pointer-events:none}
@@ -247,9 +247,9 @@ function render(){
  $('webaddr').textContent=(ip?'http://'+ip+':'+location.port+'/camera':'')+'   http://'+usb+'/camera (USB)';
  // the three buttons
  var pvOn=st.previewing||st.preview||st.keepPreview;
- bar('bpv',pvOn,!w,pvOn?'ON':'OFF');
+ bar('bpv',pvOn,!w,!pvOn?'OFF':st.keepPreview&&!p?'ON · ALWAYS':'ON');
  bar('bss',st.powerSave,!w||p,!st.powerSave?'OFF':p?'ON · HEAT PROTECTION':s?'ON':'ON · WHILE STREAMING');
- bar('btt',st.torchOn,!w||p||!st.torchSupported||!s,st.torchOn?'ON · '+st.torchLeftSec+' s':p?'OFF · HEAT PROTECTION':!st.torchSupported?'OFF · NOT ON THIS CAMERA':!s?'OFF · STREAM FIRST':'OFF');
+ bar('btt',st.torchOn,!w||p||!st.torchSupported,st.torchOn?'ON · '+st.torchLeftSec+' s':p?'OFF · HEAT PROTECTION':!st.torchSupported?'OFF · NOT ON THIS CAMERA':'OFF');
  // video
  $('ta3').style.display=p?'block':'none';
  pick('fsel',st.formats,function(v){return v.replace('x',' x ').replace('@',' @ ')+' fps'},st.format,!w||p);

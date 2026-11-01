@@ -44,7 +44,8 @@ namespace W10MSecurityCam
         private bool PreviewWanted =>
             _phoneAdjusting
             || (PreviewToggle.IsOn && !(StreamingNow && PowerSaveToggle.IsOn))
-            || (KeepPreviewToggle.IsOn && !_protect); // on: the preview runs, behind the screensaver or not, so a tap shows it at once
+            || (KeepPreviewToggle.IsOn && !_protect) // on: the preview runs, behind the screensaver or not, so a tap shows it at once
+            || _torchPreview; // the flashlight runs on the preview while the stream is off (MainPage.xaml.cs ApplyTorch)
 
         /// <summary>From the settings load, before the camera starts (the switches' handlers must not act meanwhile).</summary>
         private void LoadDisplaySettings()
@@ -165,11 +166,12 @@ namespace W10MSecurityCam
             if (PreviewBar == null || ScreensaverBar == null || KeepPreviewToggle == null) return; // the XAML still loads
             var lit = Brush(0x39, 0xFF, 0x14); var dark = Brush(0x16, 0x30, 0x1E);
             var litText = Brush(0x39, 0xFF, 0x14); var dimText = Brush(0x7F, 0xAE, 0x86);
-            bool on = previewing || _phoneAdjusting || PreviewToggle.IsOn || (KeepPreviewToggle.IsOn && !_protect);
+            bool always = KeepPreviewToggle.IsOn && !_protect; // "Preview on always" (Power) wins over the 60 s picture
+            bool on = previewing || _phoneAdjusting || PreviewToggle.IsOn || always;
             PreviewBar.Background = on ? lit : dark;
             PreviewStateText.Foreground = on ? litText : dimText;
             int left = _phoneAdjusting ? Math.Max(0, (int)Math.Ceiling((_adjustEnds - DateTime.Now).TotalSeconds)) : 0;
-            PreviewStateText.Text = !on ? "OFF" : _phoneAdjusting && left > 0 ? "ON · " + left + " s" : previewing ? "ON" : "STARTING";
+            PreviewStateText.Text = !on ? "OFF" : always ? (previewing ? "ON · ALWAYS" : "STARTING · ALWAYS") : _phoneAdjusting && left > 0 ? "ON · " + left + " s" : previewing ? "ON" : "STARTING";
             bool ss = PowerSaveToggle.IsOn;
             ScreensaverBar.Background = ss ? lit : dark;
             ScreensaverStateText.Foreground = ss ? litText : dimText;
@@ -185,6 +187,7 @@ namespace W10MSecurityCam
         private async Task TouchPhoneAdjustAsync(bool byHand)
         {
             if (_adjustTimer == null) LoadDisplaySettings();
+            if (KeepPreviewToggle.IsOn && !_protect) { if (byHand && _blackedOut) _wakeShowing = true; await ApplyDisplayAsync(byHand); return; } // Preview on always: the picture already runs, no 60 s countdown
             _adjustTimer.Stop(); _adjustTimer.Start();
             _adjustEnds = DateTime.Now.AddSeconds(AdjustSeconds);
             if (_protect) return; // heat protection keeps the screen black
