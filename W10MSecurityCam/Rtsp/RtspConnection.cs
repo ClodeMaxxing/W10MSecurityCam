@@ -563,7 +563,7 @@ namespace W10MSecurityCam.Rtsp
         }
 
         /// <summary>Called for each AAC frame while this client is playing (if it set up the audio track).</summary>
-        public void SendAudio(byte[] payload, long time100ns)
+        public void SendAudio(List<byte[]> payloads, long time100ns)
         {
             var track = _tracks[1];
             if (_closed || !_playing || !track.SetUp) return;
@@ -573,7 +573,7 @@ namespace W10MSecurityCam.Rtsp
                 if (_waitingForKeyframe) return; // start audio together with the picture
             }
             else if (!CheckHealth(now)) return;
-            SendPackets(track, new List<byte[]> { payload }, time100ns, now);
+            SendPackets(track, payloads, time100ns, now); // one AAC frame, the list shared by every viewer (read only)
         }
 
         private void SendPackets(Track track, List<byte[]> payloads, long time100ns, long now)

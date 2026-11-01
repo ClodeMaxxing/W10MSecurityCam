@@ -17,6 +17,9 @@ namespace W10MSecurityCam.Rtsp
         private readonly int[] _ports;
         private readonly List<StreamSocketListener> _listeners = new List<StreamSocketListener>();
         private readonly List<RtspConnection> _connections = new List<RtspConnection>();
+        // A copy of _connections for the frame path (about 75 calls a second with audio): read without the lock,
+        // replaced under the lock whenever a connection is added or removed. Who is playing is checked per call.
+        private volatile RtspConnection[] _connectionsCopy = new RtspConnection[0];
         private readonly object _lock = new object();
         private volatile byte[] _sps, _pps;
         private volatile AudioFormat _audio;
@@ -86,7 +89,7 @@ namespace W10MSecurityCam.Rtsp
         public void Stop()
         {
             List<RtspConnection> all;
-            lock (_lock) { all = _connections.ToList(); _connections.Clear(); }
+            lock (_lock) { all = _connections.ToList(); _connections.Clear(); _connectionsCopy = new RtspConnection[0]; }
             foreach (var c in all) c.Close();
             foreach (var l in _listeners) l.Dispose();
             _listeners.Clear();
@@ -108,8 +111,9 @@ namespace W10MSecurityCam.Rtsp
                 }
                 c = new RtspConnection(this, args.Socket);
                 _connections.Add(c);
+                _connectionsCopy = _connections.ToArray();
             }
-            var _ = c.RunAsync(() => { lock (_lock) _connections.Remove(c); });
+            var _ = c.RunAsync(() => { lock (_lock) { if (_connections.Remove(c)) _connectionsCopy = _connections.ToArray(); } });
         }
 
         public void SetParameterSets(byte[] sps, byte[] pps)
@@ -143,31 +147,27 @@ namespace W10MSecurityCam.Rtsp
         public void SendAccessUnit(IList<byte[]> nals, long time100ns, bool keyframe)
         {
             NoteMediaTime(time100ns);
-            RtspConnection[] playing;
-            lock (_lock)
-            {
-                if (_connections.Count == 0) return;
-                playing = _connections.Where(c => c.IsPlaying).ToArray();
-            }
-            if (playing.Length == 0) return;
+            var all = _connectionsCopy;
+            if (!AnyPlaying(all)) return;
 
             var payloads = RtpPacketizer.Packetize(nals, _sps, _pps, keyframe);
-            foreach (var c in playing) c.SendFrame(payloads, time100ns, keyframe);
+            foreach (var c in all) if (c.IsPlaying) c.SendFrame(payloads, time100ns, keyframe);
         }
 
         /// <summary>Called by the camera for every AAC frame.</summary>
         public void SendAudio(byte[] frame, long time100ns)
         {
             NoteMediaTime(time100ns);
-            RtspConnection[] playing;
-            lock (_lock)
-            {
-                if (_connections.Count == 0) return;
-                playing = _connections.Where(c => c.IsPlaying).ToArray();
-            }
-            if (playing.Length == 0) return;
-            var payload = RtpPacketizer.AacPayload(frame);
-            foreach (var c in playing) c.SendAudio(payload, time100ns);
+            var all = _connectionsCopy;
+            if (!AnyPlaying(all)) return;
+            var payloads = new List<byte[]>(1) { RtpPacketizer.AacPayload(frame) }; // one list for every viewer
+            foreach (var c in all) if (c.IsPlaying) c.SendAudio(payloads, time100ns);
+        }
+
+        private static bool AnyPlaying(RtspConnection[] all)
+        {
+            foreach (var c in all) if (c.IsPlaying) return true;
+            return false;
         }
     }
 }
