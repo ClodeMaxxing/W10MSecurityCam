@@ -790,6 +790,25 @@
                     </StackPanel>
                 </Border>
 
+                <!-- VIEWER SETUP: how to open the RTSP stream in an NVR, VLC, OBS or ffplay (as the settings page's section). -->
+                <Border Style="{StaticResource Drawer}">
+                    <StackPanel>
+                        <Border x:Name="ViewerFold" Style="{StaticResource DrawerHead}" Tag="ViewerPanel|ViewerFoldArrow" Tapped="Fold_Tapped">
+                            <Grid><TextBlock Text="VIEWER SETUP" Style="{StaticResource DrawerHeadText}" /><TextBlock x:Name="ViewerFoldArrow" Text="&#x25B8;" Style="{StaticResource DrawerHeadText}" HorizontalAlignment="Right" /></Grid>
+                        </Border>
+                        <StackPanel x:Name="ViewerPanel" Visibility="Collapsed" Margin="8,6,8,4">
+                            <TextBlock Style="{StaticResource InfoText}" FontSize="11" Foreground="#7FAE86" Margin="2,0,2,6" MaxWidth="400"
+                                Text="Which address: Wi-Fi addresses work from any device on the same network; USB addresses (127.0.0.1) only on the PC the phone is plugged into. The stream is standard RTSP (H.264), so NVRs and players need no special options beyond the login and TCP transport." />
+                            <Border Style="{StaticResource Field}"><StackPanel><TextBlock Text="STREAM ADDRESSES" Style="{StaticResource FieldLabel}" /><TextBlock x:Name="ViewerAddrText" IsTextSelectionEnabled="True" TextWrapping="Wrap" FontFamily="Consolas" FontSize="11" Foreground="#CFFFD2" Margin="0,2,0,0" /></StackPanel></Border>
+                            <Border Style="{StaticResource Field}"><StackPanel><TextBlock Text="NVR (BLUE IRIS, FRIGATE, SYNOLOGY, ...)" Style="{StaticResource FieldLabel}" /><TextBlock x:Name="ViewerNvrText" IsTextSelectionEnabled="True" TextWrapping="Wrap" FontFamily="Consolas" FontSize="11" Foreground="#CFFFD2" Margin="0,2,0,0" /></StackPanel></Border>
+                            <Border Style="{StaticResource Field}"><StackPanel><TextBlock Text="VLC" Style="{StaticResource FieldLabel}" /><TextBlock x:Name="ViewerVlcText" IsTextSelectionEnabled="True" TextWrapping="Wrap" FontFamily="Consolas" FontSize="11" Foreground="#CFFFD2" Margin="0,2,0,0" /></StackPanel></Border>
+                            <Border Style="{StaticResource Field}"><StackPanel><TextBlock Text="OBS STUDIO (AS A WEBCAM)" Style="{StaticResource FieldLabel}" /><TextBlock x:Name="ViewerObsText" IsTextSelectionEnabled="True" TextWrapping="Wrap" FontFamily="Consolas" FontSize="11" Foreground="#CFFFD2" Margin="0,2,0,0" /></StackPanel></Border>
+                            <Border Style="{StaticResource Field}"><StackPanel><TextBlock Text="FFPLAY (QUICK TEST)" Style="{StaticResource FieldLabel}" /><TextBlock x:Name="ViewerFfplayText" IsTextSelectionEnabled="True" TextWrapping="Wrap" FontFamily="Consolas" FontSize="11" Foreground="#CFFFD2" Margin="0,2,0,0" /></StackPanel></Border>
+                            <Border Style="{StaticResource Field}"><StackPanel><TextBlock Text="SNAPSHOT (STILL PICTURE)" Style="{StaticResource FieldLabel}" /><TextBlock x:Name="ViewerSnapText" IsTextSelectionEnabled="True" TextWrapping="Wrap" FontFamily="Consolas" FontSize="11" Foreground="#CFFFD2" Margin="0,2,0,0" /></StackPanel></Border>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
                 <!-- DETAILS AND LOG -->
                 <Border Style="{StaticResource Drawer}">
                     <StackPanel>

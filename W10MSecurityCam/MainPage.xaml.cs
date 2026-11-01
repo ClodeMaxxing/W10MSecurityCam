@@ -623,6 +623,7 @@ namespace W10MSecurityCam
             ResPill.BorderBrush = streaming ? GreenFill : Brush(0x2A, 0x4A, 0x32);
             NormalModeButton.Visibility = _camera != null && !_camera.UseNativeSink ? Visibility.Visible : Visibility.Collapsed; // safe mode: the way back
             UpdateServicePills(streaming);
+            UpdateViewerSetup();
             if (!_blackedOut || BlackoutOverlay.Visibility != Visibility.Visible) UpdateTiles(streaming); // nobody sees them under the black overlay
             // the pulse only runs while someone can see it
             bool pulse = streaming && !_blackedOut;
@@ -751,6 +752,30 @@ namespace W10MSecurityCam
         }
 
         // ------------------------------------------------------------------ login
+
+        /// <summary>The Viewer setup drawer: addresses and the lines for an NVR, VLC, OBS and ffplay, from the live state (once a second, only rewritten when changed).</summary>
+        private string _viewerKey = "";
+        private void UpdateViewerSetup()
+        {
+            if (ViewerAddrText == null) return;
+            string ip = _ips.Count > 0 ? _ips[0] : null;
+            string lg = _server.Auth.Enabled ? "USER:PASSWORD@" : "";
+            string wr = ip != null ? "rtsp://" + lg + ip + ":" + RtspPort + StreamPath : "(no Wi-Fi)";
+            string ur = "rtsp://" + lg + "127.0.0.1:" + UsbPort + StreamPath;
+            string best = ip != null ? wr : ur;
+            bool udp = _server.AllowUdp;
+            string kf = (KeyframeBox.SelectedItem as KeyframeOption)?.Seconds.ToString() ?? "2";
+            string web = ip != null ? ip + ":" + LogPort : "127.0.0.1:" + UsbPort;
+            string key = wr + ur + udp + kf + _snapshotsOn + _server.Auth.IsDefault;
+            if (key == _viewerKey) return;
+            _viewerKey = key;
+            ViewerAddrText.Text = "Wi-Fi  " + wr + "\nUSB    " + ur;
+            ViewerNvrText.Text = "Add a camera of type RTSP / generic / FFmpeg with the address above.\nTransport: TCP" + (udp ? " (UDP is allowed too)" : "") + ". Login: the stream login" + (_server.Auth.IsDefault ? " (admin / admin until changed)" : "") + ".\nKeyframe every " + kf + " s: recordings cut at keyframes.";
+            ViewerVlcText.Text = "Media > Open Network Stream, paste the address.\nOr: vlc " + (udp ? "" : "--rtsp-tcp ") + best;
+            ViewerObsText.Text = "Add a Media Source, untick Local File, then\nInput\n  " + best + "\nInput format\n  rtsp\nFFmpeg options\n  rtsp_transport=tcp fflags=nobuffer flags=low_delay\nThen Start Virtual Camera and pick OBS Virtual Camera in your video app.";
+            ViewerFfplayText.Text = "ffplay" + (udp ? "" : " -rtsp_transport tcp") + " -fflags nobuffer -flags low_delay " + best;
+            ViewerSnapText.Text = _snapshotsOn ? "http://" + web + "/snapshot.jpg  (login needed)" : "Switch Snapshots on under Network and login; then\nhttp://" + web + "/snapshot.jpg";
+        }
 
         private void UpdateLoginUi()
         {

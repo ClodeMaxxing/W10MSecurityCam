@@ -164,6 +164,16 @@ button:hover:not(:disabled){background:#18452b}button:disabled{opacity:.35}
   <button id='lb'>Save login</button></div>
 </div></div>
 
+<div class='dr'><div class='dh' data-f='viewer'>VIEWER SETUP<i>&#x25B8;</i></div><div class='db' id='viewer'>
+ <div style='font-size:11px;color:#7fae86;margin:0 2px 6px;line-height:1.4'>Which address: Wi-Fi addresses work from any device on the same network; USB addresses (127.0.0.1) only on the PC the phone is plugged into. The stream is standard RTSP (H.264), so NVRs and players need no special options beyond the login and TCP transport.</div>
+ <div class='fld'><b>Stream addresses</b><code id='vaddr'></code></div>
+ <div class='fld'><b>NVR (Blue Iris, Frigate, Synology, ...)</b><code id='vnvr'></code></div>
+ <div class='fld'><b>VLC</b><code id='vvlc'></code></div>
+ <div class='fld'><b>OBS Studio (as a webcam)</b><code id='vobs'></code></div>
+ <div class='fld'><b>ffplay (quick test)</b><code id='vffp'></code></div>
+ <div class='fld'><b>Snapshot (still picture)</b><code id='vsnap'></code></div>
+</div></div>
+
 <div class='dr'><div class='dh' data-f='details'>DETAILS AND LOG<i>&#x25B8;</i></div><div class='db' id='details'>
  <div class='fld'><b>Now</b><code id='now'></code></div>
  <div class='fld'><b>Log (last lines)</b><div class='lg' id='logtail'>-</div></div>
@@ -264,6 +274,15 @@ function render(){
  sw('lgo',st.logOn,!w);sw('sgo',st.statsOn,!w);sw('ast',st.autoStart,!w);sw('udp',st.udp,!w);sw('snap',st.snapshot,!w);
  if(!$('lu').value&&document.activeElement!==$('lu'))$('lu').value=st.user||'admin';$('lb').disabled=!w;
  $('now').textContent=(st.mode||'')+' - '+(st.now||'');
+ // viewer setup, from the live addresses (the login goes in place of USER:PASSWORD)
+ var lg=st.loginSet?'USER:PASSWORD@':'',wr=ip?'rtsp://'+lg+ip+':'+st.rtspPort+st.streamPath:'(no Wi-Fi)',ur='rtsp://'+lg+usb+st.streamPath;
+ var tr=st.udp?'':' -rtsp_transport tcp';
+ $('vaddr').textContent='Wi-Fi  '+wr+'\nUSB    '+ur;
+ $('vnvr').textContent='Add a camera of type RTSP / generic / FFmpeg with the address above.\nTransport: TCP'+(st.udp?' (UDP is allowed too)':'')+'. Login: the stream login'+(st.loginSet?' (the browser prompt is the same one)':' (admin / admin until changed)')+'.\nKeyframe every '+st.keyframeSec+' s: recordings cut at keyframes.';
+ $('vvlc').textContent='Media > Open Network Stream, paste the address.\nOr: vlc '+(st.udp?'':'--rtsp-tcp ')+(ip?wr:ur);
+ $('vobs').textContent='Add a Media Source, untick Local File, then\nInput\n  '+(ip?wr:ur)+'\nInput format\n  rtsp\nFFmpeg options\n  rtsp_transport=tcp fflags=nobuffer flags=low_delay\nThen Start Virtual Camera and pick OBS Virtual Camera in your video app.';
+ $('vffp').textContent='ffplay'+tr+' -fflags nobuffer -flags low_delay '+(ip?wr:ur);
+ $('vsnap').textContent=st.snapshot?('http://'+(ip?ip+':'+location.port:usb)+'/snapshot.jpg  (login needed)'):'Switch Snapshots on under Network and login; then http://'+(ip?ip+':'+location.port:usb)+'/snapshot.jpg';
 }
 function labels(){
  var iso=/ISO (\d+)/.exec(st.now||''),isoT=iso?' · ISO '+iso[1]:'';
