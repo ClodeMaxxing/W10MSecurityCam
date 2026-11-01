@@ -1371,6 +1371,8 @@ namespace W10MSecurityCam
                 _protect = true;
                 EndPhoneAdjust();
                 Log("HEAT PROTECTION ON: charging has paused on a good charger, so the phone is probably too hot. Forcing the power-saving options on and locking the flashlight.");
+                PlayChime(false);
+                var buzz = BuzzAsync(2);
                 if (_torchWanted) SetTorch(false);
                 _tuning.SaveOis = true; _tuning.SaveFocus = true;
                 await SetBlackoutAsync(true);
@@ -1393,6 +1395,8 @@ namespace W10MSecurityCam
             {
                 _protect = false;
                 Log("HEAT PROTECTION OFF: charging has resumed. Your own settings are back (the flashlight stays off).");
+                PlayChime(true);
+                var buzz = BuzzAsync(1);
                 _tuning.SaveOis = _pOis; _tuning.SaveFocus = _pFocus;
                 SavePowerSettings();
                 string back = ApplyVideoSettings(_pFormatKey, _pBitrateKey);
