@@ -1056,10 +1056,10 @@ namespace W10MSecurityCam
             _loadingSaveUi = true;
             try
             {
-                SaveAllCheck.IsChecked = _tuning.SaveAll;
+                SaveAllCheck.IsOn = _tuning.SaveAll;
                 SavePanel.Visibility = _tuning.SaveAll ? Visibility.Collapsed : Visibility.Visible;
-                SaveOisCheck.IsChecked = _tuning.SaveOis;
-                SaveFocusCheck.IsChecked = _tuning.SaveFocus;
+                SaveOisCheck.IsOn = _tuning.SaveOis;
+                SaveFocusCheck.IsOn = _tuning.SaveFocus;
                 // Not every camera offers every mode; say so instead of ticking something that does nothing.
                 SaveOisCheck.IsEnabled = _tuning.OisSupported || _camera == null;
             }
@@ -1069,14 +1069,14 @@ namespace W10MSecurityCam
         private void SaveAll_Changed(object sender, RoutedEventArgs e)
         {
             if (_loadingSaveUi) return;
-            _tuning.SaveAll = SaveAllCheck.IsChecked == true;
+            _tuning.SaveAll = SaveAllCheck.IsOn;
             PowerChangedFromUi();
         }
 
         private void SaveSub_Changed(object sender, RoutedEventArgs e)
         {
             if (_loadingSaveUi) return;
-            bool on = ((CheckBox)sender).IsChecked == true;
+            bool on = ((ToggleSwitch)sender).IsOn;
             if (sender == SaveOisCheck) _tuning.SaveOis = on;
             else if (sender == SaveFocusCheck) _tuning.SaveFocus = on;
             PowerChangedFromUi(); // all four ticked ticks the main box and hides the list
@@ -1181,11 +1181,11 @@ namespace W10MSecurityCam
             _loadingTuningUi = true;
             try
             {
-                AutoCameraCheck.IsChecked = _tuning.Auto;
+                AutoCameraCheck.IsOn = _tuning.Auto;
                 ManualCameraPanel.Visibility = _tuning.Auto ? Visibility.Collapsed : Visibility.Visible;
-                FocusAutoCheck.IsChecked = _tuning.FocusAuto;
-                ExposureAutoCheck.IsChecked = _tuning.ExposureAuto;
-                WbAutoCheck.IsChecked = _tuning.WbAuto;
+                FocusAutoCheck.IsOn = _tuning.FocusAuto;
+                ExposureAutoCheck.IsOn = _tuning.ExposureAuto;
+                WbAutoCheck.IsOn = _tuning.WbAuto;
                 FocusAutoCheck.IsEnabled = _tuning.FocusSupported;
                 ExposureAutoCheck.IsEnabled = _tuning.ExposureSupported;
                 WbAutoCheck.IsEnabled = _tuning.WhiteBalanceSupported;
@@ -1219,7 +1219,7 @@ namespace W10MSecurityCam
         private void AutoCameraCheck_Changed(object sender, RoutedEventArgs e)
         {
             if (_loadingTuningUi) return;
-            bool auto = AutoCameraCheck.IsChecked == true;
+            bool auto = AutoCameraCheck.IsOn;
             // Unticking the main box makes all three manual, starting from what the camera is using right now.
             if (!auto) _tuning.SeedFromCamera(_camera?.Capture, _tuning.FocusAuto, _tuning.ExposureAuto, _tuning.WbAuto);
             _tuning.Auto = auto;
@@ -1229,7 +1229,7 @@ namespace W10MSecurityCam
         private void SubAuto_Changed(object sender, RoutedEventArgs e)
         {
             if (_loadingTuningUi) return;
-            bool on = ((CheckBox)sender).IsChecked == true;
+            bool on = ((ToggleSwitch)sender).IsOn;
             if (!on) _tuning.SeedFromCamera(_camera?.Capture, sender == FocusAutoCheck, sender == ExposureAutoCheck, sender == WbAutoCheck);
             if (sender == FocusAutoCheck) _tuning.FocusAuto = on;
             else if (sender == ExposureAutoCheck) _tuning.ExposureAuto = on;

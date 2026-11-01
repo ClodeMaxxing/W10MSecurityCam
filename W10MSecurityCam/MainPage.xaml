@@ -213,33 +213,21 @@
 
                 <Button Style="{StaticResource FoldButton}" Tag="CameraPanel|CAMERA" Content="CAMERA  &#x25B8;" Click="Fold_Click" />
                 <StackPanel x:Name="CameraPanel" Visibility="Collapsed">
-                    <CheckBox x:Name="AutoCameraCheck" Content="Automatic focus, exposure and white balance" IsChecked="True"
-                              Checked="AutoCameraCheck_Changed" Unchecked="AutoCameraCheck_Changed" />
+                    <ToggleSwitch x:Name="AutoCameraCheck" Header="Automatic focus, exposure and white balance" IsOn="True" Toggled="AutoCameraCheck_Changed" />
                     <Button x:Name="FocusOnceButton" Content="Focus once and lock" Click="FocusOnceButton_Click" HorizontalAlignment="Stretch" Margin="0,2,0,4" />
                     <TextBlock x:Name="TuningStateText" Text="" FontSize="11" Foreground="#B9CFBD" TextWrapping="Wrap" Margin="0,0,0,4" />
                     <!-- Shown while at least one setting is manual. Each row: label + its own Auto box, then the slider
                          (greyed out while that setting is automatic). All three on Auto hides this panel again. -->
                     <StackPanel x:Name="ManualCameraPanel" Visibility="Collapsed">
-                        <Grid>
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                            <TextBlock x:Name="FocusLabel" Text="Focus" FontSize="12" VerticalAlignment="Center" />
-                            <CheckBox x:Name="FocusAutoCheck" Grid.Column="1" Content="Auto" MinWidth="0" FontSize="12"
-                                      Checked="SubAuto_Changed" Unchecked="SubAuto_Changed" />
-                        </Grid>
+                        <!-- Each setting: its value as a label, Auto / Manual, then the slider (greyed out on Auto). As in W10MDashcam / W10MWebCam. -->
+                        <TextBlock x:Name="FocusLabel" Text="Focus" FontSize="12" Margin="0,4,0,0" />
+                        <ToggleSwitch x:Name="FocusAutoCheck" OnContent="Auto" OffContent="Manual" Toggled="SubAuto_Changed" Margin="0,-6,0,-6" />
                         <Slider x:Name="FocusSlider" Minimum="0" Maximum="100" StepFrequency="1" Margin="0,-6,0,0" ValueChanged="TuningSlider_ValueChanged" />
-                        <Grid>
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                            <TextBlock x:Name="ExposureLabel" Text="Exposure" FontSize="12" VerticalAlignment="Center" />
-                            <CheckBox x:Name="ExposureAutoCheck" Grid.Column="1" Content="Auto" MinWidth="0" FontSize="12"
-                                      Checked="SubAuto_Changed" Unchecked="SubAuto_Changed" />
-                        </Grid>
+                        <TextBlock x:Name="ExposureLabel" Text="Exposure" FontSize="12" />
+                        <ToggleSwitch x:Name="ExposureAutoCheck" OnContent="Auto" OffContent="Manual" Toggled="SubAuto_Changed" Margin="0,-6,0,-6" />
                         <Slider x:Name="ExposureSlider" Minimum="0" Maximum="100" StepFrequency="0.5" Margin="0,-6,0,0" ValueChanged="TuningSlider_ValueChanged" />
-                        <Grid>
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                            <TextBlock x:Name="WbLabel" Text="White balance" FontSize="12" VerticalAlignment="Center" />
-                            <CheckBox x:Name="WbAutoCheck" Grid.Column="1" Content="Auto" MinWidth="0" FontSize="12"
-                                      Checked="SubAuto_Changed" Unchecked="SubAuto_Changed" />
-                        </Grid>
+                        <TextBlock x:Name="WbLabel" Text="White balance" FontSize="12" />
+                        <ToggleSwitch x:Name="WbAutoCheck" OnContent="Auto" OffContent="Manual" Toggled="SubAuto_Changed" Margin="0,-6,0,-6" />
                         <Slider x:Name="WbSlider" Minimum="2000" Maximum="8000" StepFrequency="100" Margin="0,-6,0,0" ValueChanged="TuningSlider_ValueChanged" />
                     </StackPanel>
                     <TextBlock x:Name="TorchAlert" Text="Heat protection: flashlight locked" Foreground="#FF5555" FontWeight="Bold" FontSize="12" TextWrapping="Wrap" Visibility="Collapsed" Margin="0,2,0,2" />
@@ -252,12 +240,11 @@
                     <TextBlock x:Name="PowerAlert" Text="Heat protection: power saving forced on" Foreground="#FF5555" FontWeight="Bold" FontSize="12" TextWrapping="Wrap" Visibility="Collapsed" Margin="0,2,0,2" />
                     <ToggleSwitch x:Name="PowerSaveToggle" Header="Black screen while streaming" IsOn="True" Toggled="PowerSaveToggle_Toggled" />
                     <TextBlock Text="Tap the black screen to read the status for 15 s. Show camera picture lights it for 60 s (the stream restarts briefly to start and stop the picture). The start/stop chirp follows the phone's Ringer + notifications volume." Foreground="#7F9A86" FontSize="12" TextWrapping="Wrap" Margin="0,-4,0,6" />
-                    <CheckBox x:Name="SaveAllCheck" Content="Power-saving camera features" IsChecked="True"
-                              Checked="SaveAll_Changed" Unchecked="SaveAll_Changed" />
-                    <TextBlock Text="Less processing and heat. Untick to choose each one." Foreground="#7F9A86" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,2" />
+                    <ToggleSwitch x:Name="SaveAllCheck" Header="Power-saving camera features" IsOn="True" Toggled="SaveAll_Changed" />
+                    <TextBlock Text="Less processing and heat: stabilization off for a fixed mount, and focus held once it has settled. Switch it off to choose each one." Foreground="#7F9A86" FontSize="12" TextWrapping="Wrap" Margin="0,-4,0,2" />
                     <StackPanel x:Name="SavePanel" Visibility="Collapsed" Margin="14,0,0,4">
-                        <CheckBox x:Name="SaveOisCheck" Content="Stabilization off (fixed mount)" FontSize="12" Checked="SaveSub_Changed" Unchecked="SaveSub_Changed" />
-                        <CheckBox x:Name="SaveFocusCheck" Content="Hold focus once it has settled" FontSize="12" Checked="SaveSub_Changed" Unchecked="SaveSub_Changed" />
+                        <ToggleSwitch x:Name="SaveOisCheck" Header="Stabilization off (fixed mount)" Toggled="SaveSub_Changed" />
+                        <ToggleSwitch x:Name="SaveFocusCheck" Header="Hold focus once it has settled" Toggled="SaveSub_Changed" />
                     </StackPanel>
                 </StackPanel>
 
