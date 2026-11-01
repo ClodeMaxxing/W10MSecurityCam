@@ -3,6 +3,39 @@
 Release 1.0 is the first version considered complete for this fork. Build numbers 1.0-1.9 before it were the
 development steps; they are kept in the history table for reference.
 
+## Release 1.2 (build 1.9.31.0)
+
+**What you notice**
+- **New passwords need at least 8 characters** (8-64), on the phone, on the settings page and through `/config`. A shorter password set before keeps working until you change it.
+- **Wrong logins are slowed down:** after 5 wrong logins from one address within a minute, that address is refused for 30 seconds (the web pages answer `429 Too Many Requests`, the stream answers 401). A right login clears the count.
+- The login challenge is renewed every 5 minutes. Browsers, VLC and NVRs take the new one by themselves; nobody is asked for the password again.
+- An RTSP connection that has not started playing is closed when no complete request arrives for 30 seconds, so a silent or half-open connection no longer holds one of the 8 places. The last of the 8 only takes the PC over USB, so Wi-Fi clients get at most 7 and the USB port stays usable when Wi-Fi is full.
+- The web port (5001) answers at most 16 connections at once; more get `503` "Busy, try again". A request has to arrive complete within 10 seconds, and a request with a body over 64 KB is refused.
+- The pages can no longer be shown inside a frame on another site. An error answer (500) only says "Internal error, see the app log"; the details go to the app log.
+
+**Fixes**
+- **Heat protection:** when the stream was busy starting or stopping, the restart that lowers the video to 1080p at 6 Mbps was skipped, so the stream could stay at 4K while heat protection was on. It is now retried by the once-a-second heat check.
+- Switching focus to manual starts from the last sensible lens position: the 950's autofocus sometimes reports focus 0 (the near end stop) while the picture is sharp, which made the manual picture jump out of focus (fix from W10MWebCam).
+- When the encoder sink drops a video backlog to wait for the next keyframe, the queued audio frames are kept.
+- The jobs that run every 2, 10 or 15 seconds (status text, power sample, camera readout) were skipped whenever a one-second tick came late; they now count the ticks.
+- If the Windows password vault fails while storing the default login, the app still starts and the log says so; nobody gets in until a login is saved (before, a missing password let everyone in).
+- Failed web requests are logged, at most one line per 30 seconds.
+
+**Under the hood**
+- Login: random nonces, kept for 5 minutes; `qop="auth"` is offered and its nonce count must go up, while clients without qop (VLC, many NVRs) keep working. Each login answer must be for the address requested (for RTSP also an address under it, since VLC and many NVRs sign every request with the stream's base address). The login is checked once per request.
+- RTSP: no list query or lock for every frame, and one audio payload per frame for all viewers.
+- The fps and Mbps counters are read and written safely between the encoder thread and the screen (64-bit values on ARM).
+- The battery is read once a second instead of three times; the resolution label is worked out only when the format changes; the status card keeps one brush per colour.
+- The encoder sink hands each frame to the app without an extra copy, and reports handler errors again after a stream restart.
+- The log: a line is only queued when it is logged; the file and the screen are updated once a second (also on suspend and after a crash). `/log` is unchanged.
+- The old `CamAuto` and `Bitrate` settings keys are converted once and removed. Unused code removed.
+
+**Tools**
+- `tools\Crash-Dumps.ps1`, with `tools\Enable-Crash-Dumps.cmd` and `tools\Get-Crash-Dump.cmd` (from W10MWebCam): switch Windows crash-dump collection on for the installed W10MSecurityCam through Device Portal (it is per installed version, so switch it on again after an update), list the dumps and download them to `tools\dump\`. A Device Portal pairing made by a sister app's tools is reused.
+- `tools\Sync-Core.ps1` compares the source files the three apps share (`-Check`, the default) and copies one app's copy over the others (`-Fix -From APP`). It needs all three repositories on the PC.
+- `tools\Build-And-Deploy.cmd` finds Visual Studio 2019's MSBuild with vswhere (the 2019 Community path if vswhere is missing) and logs which one it used. It and `tools\Install-Only.cmd` now report the right exit code after the pairing retry.
+- `tools\test-rtsp.ps1` takes the renewed login challenge during long runs.
+
 ## Release 1.1.1 (build 1.9.30.0)
 - **Security fix:** a single crafted RTSP request with a negative `Content-Length` made the app handle the same request again forever until it ran out of memory. It needed no login (OPTIONS) and reached the always-on RTSP ports (8554, and 8020 over USB). Such a request now closes the connection, and a client that never reads its replies is disconnected after 64.
 - **The login is needed over the USB cable too.** Any program or web page on the PC the phone is plugged into can reach the USB port, so "no login over USB" let a web page change settings or reset the login. The settings page, `/status`, the log and `/config` now ask for the login on every port.

@@ -32,6 +32,11 @@ asks; VLC and ffmpeg switch to it by themselves. Quick check:
 
 Give the phone a fixed address (a DHCP reservation in the router), so the NVR always finds it.
 
+The RTSP ports take 8 connections at once; the last one is kept for the PC over USB, so Wi-Fi clients get at most 7.
+A connection that has not started playing is closed when it sends no complete request for 30 seconds. The web port
+(5001) answers at most 16 connections at once (more get "503 Busy, try again"), and a request has to arrive complete
+within 10 seconds.
+
 ## Defaults
 
 1080p at 24 fps (the lowest rate of 15 fps or more the camera offers), 4 Mbps, keyframe every 2 s. A fresh install
@@ -110,6 +115,11 @@ settings page warn until you change it.
   an empty new password resets it to admin / admin.
 - **Forgotten password:** set a new one on the phone (Network and login); it does not ask for the old one.
 
+Since 1.2 a new password needs at least 8 characters everywhere (phone, settings page, `/config`); a shorter one set
+before keeps working until you change it. After 5 wrong logins from one address within a minute, that address is
+refused for 30 seconds (the web pages answer `429 Too Many Requests`, the stream 401). The phone renews the login
+challenge every 5 minutes; browsers, VLC and NVRs take the new one by themselves without asking for the password.
+
 NVRs then use `rtsp://USER:PASSWORD@PHONE-IP:8554/live`. The phone uses Digest authentication, which doesn't send the
 password itself. Older NVRs that only know Basic authentication can be allowed with `basic=on` (see Settings over USB).
 The login is kept in the Windows password vault, so it survives reinstalling the app. Traffic is not encrypted
@@ -144,7 +154,7 @@ powershell -File tools\set-camera-config.ps1 -Body "udp=on&audio=off"
 powershell -File tools\set-camera-config.ps1 -Body "password="        (resets the login to admin / admin)
 ```
 
-Fields: `user`, `password`, `basic=on|off`, `stream=start|stop|restart`, `engine=normal`, `highbw=on|off`, `powersave=on|off`,
+Fields: `user`, `password` (a new one needs at least 8 characters), `basic=on|off`, `stream=start|stop|restart`, `engine=normal`, `highbw=on|off`, `powersave=on|off`,
 `camera=auto|manual`, `focus=auto|manual|once|0-100`, `exposure=auto|manual|MS`, `wb=auto|manual|KELVIN`, `format=WIDTHxHEIGHT@FPS`, `bitrate=MBPS|auto`, `audio=on|off`,
 `udp=on|off`, `snapshot=on|off`, `savepower=on|off`, `saveois=on|off`, `savefocus=on|off`, `torch=on|off`. Changing
 format or bitrate restarts the stream (viewers reconnect within a second or two). The list of formats the camera offers
@@ -193,7 +203,7 @@ The release is ready-built: no compiling and nothing else to download. Download 
 from the [latest release](https://github.com/ClodeMaxxing/W10MSecurityCam/releases/latest). It holds:
 
 - the app package, `W10MSecurityCam_<package version>_ARM.appx` (the package version has four parts, for example
-  1.9.30.0 for release 1.1.1);
+  1.9.31.0 for release 1.2);
 - `Dependencies\` with the three Microsoft runtime packages it needs: `Microsoft.NET.Native.Framework.1.7.appx`,
   `Microsoft.NET.Native.Runtime.1.7.appx` and `Microsoft.VCLibs.ARM.14.00.appx`;
 - the test certificate the package is signed with (`.cer`), `INSTALL.txt` with the steps, and `LICENSE`.
@@ -224,7 +234,7 @@ Bump `Version` in `W10MSecurityCam/Package.appxmanifest` for every install, or t
 
 | Script | Use |
 |---|---|
-| `tools\Build-And-Deploy.cmd` | Build Release ARM and install on the phone (USB first, then Wi-Fi using the address in `tools\phone-ip.txt`) |
+| `tools\Build-And-Deploy.cmd` | Build Release ARM and install on the phone (USB first, then Wi-Fi using the address in `tools\phone-ip.txt`). Finds Visual Studio 2019's MSBuild with vswhere (the 2019 Community path if vswhere is missing) |
 | `tools\Install-Only.cmd` | Re-install the last build |
 | `tools\Get-Phone-Log.cmd` | Download the phone log to `tools\phone-log.txt` |
 | `tools\Set-Camera-Login.cmd` | Set or reset the stream login over USB (asks for the current login; it is never removed) |
@@ -234,6 +244,9 @@ Bump `Version` in `W10MSecurityCam/Package.appxmanifest` for every install, or t
 | `tools\check-http.ps1`, `tools\check-snapshot.ps1` | Check the web endpoints / fetch snapshots |
 | `tools\Soak-Monitor.ps1` | Long-run recorder: samples every status value every 30 s to `tools\soak\*.csv` and keeps an HTML report with graphs of each metric over time and a summary (availability, restarts, heat time, fps, memory trend). See *Soak testing* above |
 | `tools\Monitor-Portal.ps1` | Logs whole-phone CPU, GPU and battery from Device Portal once a minute (`-Pair PIN` first) |
+| `tools\Crash-Dumps.ps1` | Windows crash dumps through Device Portal: `-Pair PIN` once, `-Enable` (again after each app update), `-List`, `-Get` (to `tools\dump\`), `-Disable` |
+| `tools\Enable-Crash-Dumps.cmd`, `tools\Get-Crash-Dump.cmd` | Switch crash dumps on and list them / download W10MSecurityCam's dumps |
+| `tools\Sync-Core.ps1` | Compares the source files the three apps share (`-Check`) or copies one app's copy over the others (`-Fix -From APP`); needs all three repositories |
 | `tools\Remove-Dead-IpOverUsb-Keys.cmd` | Optional, run as admin: deletes the unused `LumiaCam*` IP-over-USB registry entries |
 
 Put the phone's IP address in `tools\phone-ip.txt` (one line, not committed) for the Wi-Fi fallback and the test scripts. `tools\autotest\Run-Next.cmd`
