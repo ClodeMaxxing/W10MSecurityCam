@@ -776,6 +776,7 @@ namespace W10MSecurityCam
             if (_resLabel != null) ResText.Text = _resLabel;
             StatsText.Visibility = streaming ? Visibility.Visible : Visibility.Collapsed;
             if (streaming) StatsText.Text = string.Format("{0,2:0} fps {1,4:0.0} Mbps", _camera.Fps, _camera.Mbps);
+            NormalModeButton.Visibility = _camera != null && !_camera.UseNativeSink ? Visibility.Visible : Visibility.Collapsed; // safe mode: the way back
             if (!_blackedOut || BlackoutOverlay.Visibility != Visibility.Visible) UpdateTiles(streaming); // nobody sees them under the black overlay
             // the pulse only runs while someone can see it
             bool pulse = streaming && !_blackedOut;
@@ -1898,6 +1899,25 @@ namespace W10MSecurityCam
             Log("Snapshots " + (_snapshotsOn ? "on: http://PHONE-IP:" + LogPort + "/snapshot.jpg" : "off"));
         }
 
+        /// <summary>Leaves SAFE MODE: the low-latency engine again (restarts a running stream once). UI thread.</summary>
+        private async Task ReturnToNormalModeAsync(string from)
+        {
+            if (_camera == null || _camera.UseNativeSink) return;
+            bool was = _camera.IsStreaming;
+            _camera.UseNativeSink = true;
+            _safeMode = false;
+            _nativeStalls = 0;
+            _lastRestartReason = "";
+            Log("Normal (low-latency) engine restored from " + from);
+            if (was) { await ToggleStreamingAsync(); await ToggleStreamingAsync(); }
+        }
+
+        private async void NormalModeButton_Click(object sender, RoutedEventArgs e)
+        {
+            try { await ReturnToNormalModeAsync("the phone"); }
+            catch (Exception ex) { Log("Normal mode: " + ex.Message); }
+        }
+
         /// <summary>Runs work on the UI thread and completes when it has finished (Dispatcher.RunAsync alone returns at the first await).</summary>
         private Task RunUiAsync(Func<Task> work)
         {
@@ -1998,16 +2018,7 @@ namespace W10MSecurityCam
             }
             if (form.TryGetValue("engine", out var eng) && eng.Trim().Equals("normal", StringComparison.OrdinalIgnoreCase))
             {
-                await RunUiAsync(async () =>
-                {
-                    if (_camera == null) return;
-                    bool was = _camera.IsStreaming;
-                    _camera.UseNativeSink = true;
-                    _safeMode = false;
-                    _lastRestartReason = "";
-                    Log("Normal (low-latency) engine restored from the web page");
-                    if (was) { await ToggleStreamingAsync(); await ToggleStreamingAsync(); }
-                });
+                await RunUiAsync(() => ReturnToNormalModeAsync("the web page"));
                 done.Add("normal engine restored");
             }
             form.TryGetValue("format", out var fmt);
