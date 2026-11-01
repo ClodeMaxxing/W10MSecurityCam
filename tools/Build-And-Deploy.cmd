@@ -8,7 +8,12 @@ if exist "%~dp0phone-ip.txt" set /p PHONE=<"%~dp0phone-ip.txt"
 if not defined PHONE echo  Tip: put the phone's IP address in tools\phone-ip.txt for the Wi-Fi fallback
 echo Started %date% %time% > "%LOG%"
 
-set MSBUILD=%ProgramFiles(x86)%\Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin\MSBuild.exe
+rem MSBuild of the newest Visual Studio with MSBuild installed; the 2019 Community path if vswhere is missing
+set MSBUILD=
+set VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe
+if exist "%VSWHERE%" for /f "usebackq delims=" %%i in (`"%VSWHERE%" -latest -requires Microsoft.Component.MSBuild -find MSBuild\**\Bin\MSBuild.exe`) do if not defined MSBUILD set "MSBUILD=%%i"
+if not defined MSBUILD set MSBUILD=%ProgramFiles(x86)%\Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin\MSBuild.exe
+echo MSBuild: %MSBUILD% >> "%LOG%"
 if not exist "%MSBUILD%" (
   echo MSBuild not found >> "%LOG%"
   goto :done
@@ -56,7 +61,7 @@ if %errorlevel%==0 (
   echo  For developers - Pair, then type the code shown.
   set /p PIN= Code: 
   call "%WADC%" install -file "%APPX%" -ip %PHONE% -pin %%PIN%% -dependency "%DEP1%" "%DEP2%" "%DEP3%" >> "%LOG%" 2>&1
-  set RC=%errorlevel%
+  call set RC=%%errorlevel%%
 )
 echo DeployExitCode %RC% >> "%LOG%"
 

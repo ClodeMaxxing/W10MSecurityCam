@@ -39,7 +39,7 @@ if %errorlevel%==0 (
   echo  For developers - Pair, then type the code shown.
   set /p PIN= Code: 
   call "%WADC%" install -file "%APPX%" -ip %PHONE% -pin %%PIN%% -dependency "%DEP1%" "%DEP2%" "%DEP3%" >> "%LOG%" 2>&1
-  set RC=%errorlevel%
+  call set RC=%%errorlevel%%
 )
 echo DeployExitCode %RC% >> "%LOG%"
 
