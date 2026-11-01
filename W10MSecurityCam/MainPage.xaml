@@ -186,6 +186,9 @@
                         <Border x:Name="LoginNotice" Visibility="Collapsed" BorderBrush="#7D6E2E" BorderThickness="3,1,1,1" CornerRadius="5" Background="#1A1808" Padding="8,5,8,5" Margin="0,8,0,0">
                             <TextBlock Text="Default login admin / admin in use. Change it under Network and login." FontSize="11" Foreground="#E8D8A0" TextWrapping="Wrap" />
                         </Border>
+                        <Border x:Name="ChargerNoticeBorder" Visibility="Collapsed" BorderBrush="#7D6E2E" BorderThickness="3,1,1,1" CornerRadius="5" Background="#1A1808" Padding="8,5,8,5" Margin="0,6,0,0">
+                            <TextBlock x:Name="ChargerNoticeText" Text="" FontSize="11" Foreground="#E8D8A0" TextWrapping="Wrap" />
+                        </Border>
                     </StackPanel>
                 </Border>
                 <TextBlock x:Name="AlertText" Text="" Foreground="#FF5555" FontWeight="Bold" FontSize="12" TextWrapping="Wrap" Visibility="Collapsed" Margin="0,0,0,4" />

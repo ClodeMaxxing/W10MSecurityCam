@@ -175,6 +175,7 @@ function render(){
  var nh='';
  if(st.heatWarn)nh+=""<div class='notice bad'><span class='ni'>!</span><span>""+esc(st.heatDetail||'Temperature unstable.')+'</span></div>';
  if(st.defaultLogin)nh+=""<div class='notice'><span class='ni'>!</span><span>Default login <code>admin / admin</code> in use. Change it under Login.</span></div>"";
+ if(st.chargerNotice)nh+=""<div class='notice'><span class='ni'>!</span><span>""+esc(st.chargerNotice)+'</span></div>';
  $('warn').innerHTML=nh;
  if(!$('lu').value&&document.activeElement!==$('lu'))$('lu').value=st.user||'admin';
  $('lb').disabled=!st.canWrite;

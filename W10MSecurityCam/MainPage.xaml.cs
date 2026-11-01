@@ -825,6 +825,8 @@ namespace W10MSecurityCam
                 SetBar(PowerBar, PowerBarFill, w.HasValue ? 100 * Math.Abs(w.Value) / 15 : 0,
                     charging ? (w < 0 ? RedFill : w < 1 ? AmberFill : GreenFill) : (w > 8 ? RedFill : AmberFill));
                 LoginNotice.Visibility = _server.Auth.IsDefault ? Visibility.Visible : Visibility.Collapsed;
+                ChargerNoticeBorder.Visibility = _chargerNotice.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+                if (_chargerNotice.Length > 0) ChargerNoticeText.Text = _chargerNotice;
 
                 long lat = streaming && _camera != null ? _camera.LastLatencyMs : -1;
                 LatText.Text = lat >= 0 ? lat + " ms" : "n/a";
@@ -1560,6 +1562,7 @@ namespace W10MSecurityCam
             o["charging"] = JsonValue.CreateBooleanValue(IsCharging(br));
             o["onExternalPower"] = JsonValue.CreateBooleanValue(OnExternalPower(br));
             o["batteryFalling"] = JsonValue.CreateBooleanValue(BatteryFalling);
+            o["chargerNotice"] = JsonValue.CreateStringValue(_chargerNotice);
             o["batterySaver"] = JsonValue.CreateStringValue(BatterySaverText());
             int wb2 = WifiBars();
             o["wifiBars"] = wb2 >= 0 ? JsonValue.CreateNumberValue(wb2) : JsonValue.CreateNullValue();
@@ -1613,6 +1616,7 @@ namespace W10MSecurityCam
             o["batteryPercent"] = pct.HasValue ? JsonValue.CreateNumberValue(pct.Value) : JsonValue.CreateNullValue();
             o["batteryStatus"] = JsonValue.CreateStringValue(r != null ? r.Status.ToString() : "unknown");
             o["batteryFalling"] = JsonValue.CreateBooleanValue(BatteryFalling);
+            o["chargerNotice"] = JsonValue.CreateStringValue(_chargerNotice);
             o["netWatts"] = _power.NetWatts.HasValue ? JsonValue.CreateNumberValue(Math.Round(_power.NetWatts.Value, 2)) : JsonValue.CreateNullValue();
             o["drawWatts"] = _power.DrawWatts.HasValue ? JsonValue.CreateNumberValue(Math.Round(_power.DrawWatts.Value, 2)) : JsonValue.CreateNullValue();
             o["cpuAppPct"] = _power.ProcCpuPct.HasValue ? JsonValue.CreateNumberValue(Math.Round(_power.ProcCpuPct.Value)) : JsonValue.CreateNullValue();
