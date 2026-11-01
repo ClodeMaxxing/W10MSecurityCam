@@ -1,34 +1,41 @@
-# Soak monitor: records the camera's status every few seconds to a CSV file and keeps an HTML report with graphs of
-# every metric over time (frame rate, bitrate, battery, power, CPU, memory, latency, Wi-Fi, heat, restarts).
+# Soak monitor for the W10M camera family: records the app's /status every few seconds to a CSV file, keeps an HTML
+# report with graphs of every metric over time (frame rate, bitrate, battery, power, CPU, memory, latency, Wi-Fi, heat,
+# restarts), and collects the phone's own log every few minutes. The same script is in all three repositories' tools
+# folders; /status carries the same field names in W10MSecurityCam, W10MDashcam and W10MWebCam.
 #
-#   powershell -ExecutionPolicy Bypass -File tools\Soak-Monitor.ps1
-#   powershell -ExecutionPolicy Bypass -File tools\Soak-Monitor.ps1 -Phone 192.168.0.50 -User admin -Password secret -Every 15
+#   powershell -ExecutionPolicy Bypass -File tools\Soak-Monitor.ps1                                   (over the USB cable)
+#   powershell -ExecutionPolicy Bypass -File tools\Soak-Monitor.ps1 -Phone 192.168.0.50 -Every 15     (over Wi-Fi)
 #
+# Reading /status and /log needs no login (view only); -User / -Password are only for an app that still asks for one.
+# The log is collected only while the app's Log page switch is on (Network on the phone, or the settings page).
 # Output (in tools\soak\, kept out of git):  soak-YYYYMMDD-HHMM.csv, soak-YYYYMMDD-HHMM.html and
-# soak-YYYYMMDD-HHMM-phone-log.txt (the phone's own log for the whole run, collected every few minutes).
-# Open the HTML file in a browser at any time; it reloads itself every minute while the monitor runs.
-# Stop with Ctrl+C. Run it again with -Csv <file> to continue an earlier run, or -ReportOnly -Csv <file> to redraw a report.
+# soak-YYYYMMDD-HHMM-phone-log.txt. Open the HTML file in a browser at any time; it reloads itself every minute while
+# the monitor runs. Stop with Ctrl+C. Run it again with -Csv <file> to continue an earlier run, or -ReportOnly -Csv <file>
+# to redraw a report.
 param(
-  [string]$Phone,
-  [string]$User = 'admin',
-  [string]$Password = 'admin',
+  [string]$Phone,                   # empty = over USB (http://127.0.0.1:8020); otherwise http://PHONE:5001
+  [string]$User,                    # optional login (older builds asked for one to read)
+  [string]$Password,
   [int]$Every = 30,                 # seconds between samples
   [int]$ReportEvery = 60,           # seconds between report rewrites
-  [int]$LogEvery = 300,             # seconds between phone-log captures (the phone keeps only its last ~2 hours)
+  [int]$LogEvery = 300,             # seconds between phone-log captures (the phone keeps only its last ~2 hours); 0 = never
   [string]$Csv,
   [switch]$ReportOnly
 )
 $ErrorActionPreference = 'Stop'
-if (-not $Phone) { $Phone = (Get-Content "$PSScriptRoot\phone-ip.txt" -TotalCount 1 -ErrorAction SilentlyContinue); if ($Phone) { $Phone = $Phone.Trim() } }
-if (-not $Phone -and -not $ReportOnly) { throw 'Give -Phone ADDRESS or put the phone address in tools\phone-ip.txt' }
+$Base = if ($Phone) { "http://${Phone}:5001" } else { 'http://127.0.0.1:8020' }
+$Auth = @(); if ($User) { $Auth = @('--digest', '-u', "${User}:${Password}") }
 $dir = Join-Path $PSScriptRoot 'soak'; New-Item -ItemType Directory -Force $dir | Out-Null
 if (-not $Csv) { $Csv = Join-Path $dir ('soak-' + (Get-Date -Format 'yyyyMMdd-HHmm') + '.csv') }
 $Html = [IO.Path]::ChangeExtension($Csv, '.html')
 $PhoneLog = [IO.Path]::ChangeExtension($Csv, $null).TrimEnd('.') + '-phone-log.txt'
 $script:LastLogLine = $null
-$jar = Join-Path $env:LOCALAPPDATA 'W10MSecurityCam\portal.jar'   # optional Device Portal pairing (Monitor-Portal.ps1 -Pair)
+$script:App = ''
+# Optional Device Portal pairing (Monitor-Portal.ps1 -Pair) for the GPU column; the jar is kept per app under %LOCALAPPDATA%.
+$sln = Get-ChildItem (Split-Path $PSScriptRoot -Parent) -Filter *.sln -ErrorAction SilentlyContinue | Select-Object -First 1
+$jar = Join-Path $env:LOCALAPPDATA (($(if ($sln) { $sln.BaseName } else { 'W10M' })) + '\portal.jar')
 
-$cols = 'time,ok,version,streaming,fps,mbps,viewers,format,bitrate,engine,latency_ms,battery_pct,battery_status,charging,net_w,draw_w,heat,heat_warn,protect,cpu_phone,cpu_app,memory_mb,wifi_bars,uptime_s,blackout,previewing,gpu_max_pct'
+$cols = 'time,ok,version,streaming,fps,mbps,viewers,format,bitrate,engine,latency_ms,battery_pct,battery_status,charging,net_w,draw_w,heat,heat_warn,protect,cpu_phone,cpu_app,memory_mb,wifi_bars,uptime_s,blackout,previewing,gpu_max_pct,restarts,safe'
 if (-not (Test-Path $Csv)) { $cols | Out-File $Csv -Encoding ascii }
 
 function Num($v) { if ($null -eq $v) { '' } else { [string]([double]$v).ToString([Globalization.CultureInfo]::InvariantCulture) } }
@@ -37,22 +44,21 @@ function B($v) { if ($v) { '1' } else { '0' } }
 function Sample {
   $t = Get-Date -Format 's'
   try {
-    $raw = curl.exe -s -m 10 --digest -u "${User}:${Password}" "http://${Phone}:5001/camera/state"
+    $raw = curl.exe -s -m 10 @Auth "$Base/status"
     $s = $raw | ConvertFrom-Json
-  } catch { return "$t,0" + (',' * 25) }
-  $cp = ''; $ca = ''
-  if ($s.cpuText -match 'phone (\d+) %, app (\d+)') { $cp = $Matches[1]; $ca = $Matches[2] }
+  } catch { return "$t,0" + (',' * 27) }
+  if ($s.app) { $script:App = ([string]$s.app).Split(' ')[0] }
   $gpu = ''
-  if (Test-Path $jar) {
+  if ($Phone -and (Test-Path $jar)) {
     try {
       $p = curl.exe -sk -m 8 -b $jar "https://$Phone/api/resourcemanager/systemperf" | ConvertFrom-Json
       $gpu = [math]::Round(($p.GPUData.AvailableAdapters[0].EnginesUtilization | Measure-Object -Maximum).Maximum, 1)
     } catch { }
   }
-  $f = @($t, '1', $s.version, (B $s.streaming), (Num $s.fps), (Num $s.mbps), $s.viewers, $s.format, $s.bitrate, $s.engine,
+  $f = @($t, '1', $s.version, (B $s.streaming), (Num $s.fps), (Num $s.mbps), $s.viewers, $s.format, $s.bitrateSetting, $s.engine,
          (Num $s.latencyMs), (Num $s.battery), $s.batteryStatus, (B $s.charging), (Num $s.netWatts), (Num $s.drawWatts),
-         $s.heat, (B $s.heatWarn), (B $s.protect), $cp, $ca, (Num $s.memoryMB), (Num $s.wifiBars), (Num $s.uptime),
-         (B $s.blackout), (B $s.previewing), $gpu)
+         $s.heat, (B ($s.heatLevel -ge 2)), (B $s.protect), (Num $s.cpuPhone), (Num $s.cpuApp), (Num $s.memoryMB), (Num $s.wifiBars), (Num $s.uptime),
+         (B $s.blackout), (B $s.previewing), $gpu, (Num $s.restarts), (B $s.safeMode))
   ($f | ForEach-Object { ([string]$_) -replace ',', ';' }) -join ','
 }
 
@@ -60,10 +66,10 @@ function Sample {
 # (oldest first) and then '--- previous session'. Lines carry only a time of day, so new lines are found by locating
 # the last line saved; if it is gone (app restarted, or more than ~2 h passed), the whole session is saved after a marker.
 function Save-PhoneLog {
-  try { $raw = curl.exe -s -m 20 --digest -u "${User}:${Password}" "http://${Phone}:5001/log" } catch { return }
+  try { $raw = curl.exe -s -m 20 @Auth "$Base/log" } catch { return }
   if (-not $raw) { return }
   $lines = @(); foreach ($l in $raw) { if ($l -like '--- previous session*') { break }; if ($l -match '^\d\d:\d\d:\d\d') { $lines += $l } }
-  if ($lines.Count -eq 0) { return }
+  if ($lines.Count -eq 0) { return }   # the log page is switched off (403), or nothing logged yet
   $start = 0
   if ($script:LastLogLine) {
     $i = [array]::LastIndexOf($lines, $script:LastLogLine)
@@ -82,13 +88,14 @@ function Save-PhoneLog {
 function Write-Report {
   $rows = Get-Content $Csv | Select-Object -Skip 1
   $data = ($rows | ForEach-Object { '"' + ($_ -replace '"', '') + '"' }) -join ",`n"
-  $page = $script:Template.Replace('/*COLS*/', '"' + $cols + '"').Replace('/*ROWS*/', $data).Replace('/*TITLE*/', [IO.Path]::GetFileNameWithoutExtension($Csv)).Replace('/*LIVE*/', $(if ($ReportOnly) { 'false' } else { 'true' }))
+  $app = if ($script:App) { $script:App } elseif ($sln) { $sln.BaseName } else { 'W10M camera' }
+  $page = $script:Template.Replace('/*COLS*/', '"' + $cols + '"').Replace('/*ROWS*/', $data).Replace('/*TITLE*/', [IO.Path]::GetFileNameWithoutExtension($Csv)).Replace('/*APP*/', $app).Replace('/*LIVE*/', $(if ($ReportOnly) { 'false' } else { 'true' }))
   [IO.File]::WriteAllText($Html, $page, (New-Object Text.UTF8Encoding $false))
 }
 
 $script:Template = @'
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>/*TITLE*/ - W10MSecurityCam soak</title>
+<title>/*TITLE*/ - /*APP*/ soak</title>
 <style>
 body{font-family:'Segoe UI',system-ui,sans-serif;background:#000;color:#d6e8d9;margin:0;padding:18px 22px}
 h1{font-size:20px;margin:0;color:#e4f5e7}h1 small{font-size:12px;color:#39ff14;margin-left:10px}
@@ -105,7 +112,7 @@ canvas{width:100%;height:170px;display:block}
 .legend{font-size:11px;color:#7f9a86;margin-top:2px}.legend span{margin-right:12px}.legend span::before{content:'';display:inline-block;width:10px;height:3px;margin-right:4px;vertical-align:middle;background:var(--c)}
 #tip{position:fixed;pointer-events:none;background:#0b1a10;border:1px solid #2e7d46;border-radius:6px;padding:6px 8px;font-size:12px;display:none;white-space:pre;font-family:Consolas,monospace;z-index:9}
 </style></head><body>
-<h1>W10MSecurityCam soak<small id="ver"></small></h1><div class="sub" id="span"></div>
+<h1>/*APP*/ soak<small id="ver"></small></h1><div class="sub" id="span"></div>
 <div class="sum" id="sum"></div><div class="charts" id="charts"></div><div id="tip"></div>
 <script>
 var COLS=/*COLS*/.split(','),LIVE=/*LIVE*/,ROWS=[
@@ -122,18 +129,19 @@ function dt(t){var d=new Date(t);return d.toLocaleDateString()+' '+d.toLocaleTim
  if(!R.length){document.getElementById('span').textContent='No samples yet.';return}
  var t0=R[0].t,t1=R[R.length-1].t,dur=t1-t0;
  document.getElementById('span').textContent=dt(t0)+'  to  '+dt(t1)+'   ('+fmtDur(dur)+', '+R.length+' samples'+(LIVE?', updates every minute':'')+')';
- var last=ok[ok.length-1];if(last)document.getElementById('ver').textContent='v'+last.version+'  '+last.format+'  '+last.bitrate+(last.bitrate==='auto'?'':' Mbps');
+ var last=ok[ok.length-1];if(last)document.getElementById('ver').textContent='v'+last.version+'  '+last.format+'  '+last.bitrate;
  var reach=ok.length/R.length*100,str=ok.filter(function(r){return r.streaming==='1'}).length/Math.max(1,ok.length)*100;
- var appRestarts=0,streamDrops=0,prot=0,heat=0,ver={};
- for(var i=1;i<ok.length;i++){var a=ok[i-1],b=ok[i];if(n(b.uptime_s)<n(a.uptime_s))appRestarts++;if(a.streaming==='1'&&b.streaming!=='1')streamDrops++;if(b.protect==='1')prot+=b.t-a.t;if(b.heat_warn==='1')heat+=b.t-a.t;if(a.version!==b.version)ver[b.version]=1}
+ var appRestarts=0,streamDrops=0,prot=0,heat=0,short=0,ver={};
+ for(var i=1;i<ok.length;i++){var a=ok[i-1],b=ok[i];if(n(b.uptime_s)<n(a.uptime_s))appRestarts++;if(a.streaming==='1'&&b.streaming!=='1')streamDrops++;if(b.protect==='1')prot+=b.t-a.t;if(b.heat_warn==='1')heat+=b.t-a.t;if(b.charging==='1'&&n(b.net_w)!=null&&n(b.net_w)<0)short+=b.t-a.t;if(a.version!==b.version)ver[b.version]=1}
  var fps=ok.filter(function(r){return r.streaming==='1'}).map(function(r){return n(r.fps)}).filter(function(v){return v!=null});
  var mem=ok.map(function(r){return n(r.memory_mb)}).filter(function(v){return v!=null});
  var memSlope=null;if(mem.length>20&&dur>3600000){var h=dur/3600000,q=Math.floor(mem.length/10);memSlope=(avg(mem.slice(-q))-avg(mem.slice(0,q)))/h}
  var bat=ok.map(function(r){return n(r.battery_pct)}).filter(function(v){return v!=null});
+ var rs=ok.map(function(r){return n(r.restarts)}).filter(function(v){return v!=null});
  var K=[['Duration',fmtDur(dur)],['Phone reachable',reach.toFixed(1)+' %',reach<99?'bad':'ok'],['Streaming',str.toFixed(1)+' %',str<99?'bad':'ok'],
-  ['App restarts',appRestarts,appRestarts?'bad':'ok'],['Stream stops',streamDrops,streamDrops>0?'bad':'ok'],
+  ['App restarts',appRestarts,appRestarts?'bad':'ok'],['Stream stops',streamDrops,streamDrops>0?'bad':'ok'],['Self restarts',rs.length?Math.max.apply(null,rs):'n/a',rs.length&&Math.max.apply(null,rs)?'bad':'ok'],
   ['FPS avg / min',fps.length?avg(fps).toFixed(1)+' / '+Math.min.apply(null,fps).toFixed(0):'n/a'],
-  ['Heat warning',fmtDur(heat),heat?'bad':'ok'],['Heat protection',fmtDur(prot),prot?'bad':'ok'],
+  ['Heat warning',fmtDur(heat),heat?'bad':'ok'],['Heat protection',fmtDur(prot),prot?'bad':'ok'],['Charger short',fmtDur(short),short?'bad':'ok'],
   ['Battery min / last',bat.length?Math.min.apply(null,bat)+' / '+bat[bat.length-1]+' %':'n/a'],
   ['Memory last / max',mem.length?Math.round(mem[mem.length-1])+' / '+Math.round(Math.max.apply(null,mem))+' MB':'n/a'],
   ['Memory trend',memSlope==null?'needs 1 h':(memSlope>=0?'+':'')+memSlope.toFixed(1)+' MB/h',memSlope!=null&&memSlope>5?'bad':'']];
@@ -151,7 +159,7 @@ var CH=[
  {t:'Encoder latency',u:'ms',s:[['latency_ms',GREEN,'sensor to encoded']],min:0},
  {t:'Wi-Fi',u:'bars',s:[['wifi_bars',GREEN,'bars']],min:0,max:4,step:true},
  {t:'Viewers',u:'',s:[['viewers',MINT,'viewers']],min:0,step:true},
- {t:'Heat and states',u:'',flags:[['streaming',GREEN,'streaming'],['heat_warn',AMBER,'heat warning'],['protect',RED,'heat protection'],['previewing',BLUE,'preview on'],['ok',GREY,'reachable']]}
+ {t:'Heat and states',u:'',flags:[['streaming',GREEN,'streaming'],['charging',BLUE,'charging'],['heat_warn',AMBER,'heat warning'],['protect',RED,'heat protection'],['safe',RED,'safe mode'],['previewing',MINT,'preview on'],['ok',GREY,'reachable']]}
 ];
 var host=document.getElementById('charts'),tip=document.getElementById('tip'),t0=R.length?R[0].t:0,t1=R.length?R[R.length-1].t:1;
 CH.forEach(function(c){
@@ -197,16 +205,16 @@ function hover(c,e){
 '@
 
 if ($ReportOnly) { Write-Report; Write-Host "Report: $Html"; return }
-Write-Host "Recording every $Every s to $Csv"
+Write-Host "Recording every $Every s from $Base/status to $Csv"
 Write-Host "Report:  $Html  (open it in a browser; it refreshes every minute)"
-Write-Host "Phone log: $PhoneLog (every $LogEvery s)"
+if ($LogEvery -gt 0) { Write-Host "Phone log: $PhoneLog (every $LogEvery s, while the app's Log page is on)" }
 Write-Host 'Stop with Ctrl+C.'
 $lastReport = [DateTime]::MinValue
 $lastLog = [DateTime]::MinValue
 while ($true) {
   $line = Sample
   Add-Content -Path $Csv -Value $line -Encoding ascii
-  if (((Get-Date) - $lastLog).TotalSeconds -ge $LogEvery) { Save-PhoneLog; $lastLog = Get-Date }
+  if ($LogEvery -gt 0 -and ((Get-Date) - $lastLog).TotalSeconds -ge $LogEvery) { Save-PhoneLog; $lastLog = Get-Date }
   if (((Get-Date) - $lastReport).TotalSeconds -ge $ReportEvery) { try { Write-Report } catch { Write-Warning "Report: $_" }; $lastReport = Get-Date }
   $f = $line.Split(',')
   Write-Host ("{0}  {1}  fps {2}  {3} Mbps  battery {4}%  heat {5}  mem {6} MB" -f $f[0], $(if ($f[1] -eq '1') { if ($f[3] -eq '1') { 'streaming' } else { 'stopped  ' } } else { 'UNREACHABLE' }), $f[4], $f[5], $f[11], $f[16], $f[21])
