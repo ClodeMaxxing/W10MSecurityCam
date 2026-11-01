@@ -146,8 +146,6 @@ namespace W10MSecurityCam
         {
             if (StreamBar == null) return;
             StreamBar.Background = streaming ? GreenFill : Brush(0x16, 0x30, 0x1E);
-            StreamStateText.Foreground = streaming ? GreenFill : Brush(0x7F, 0xAE, 0x86);
-            StreamStateText.Text = !StartButton.IsEnabled ? (streaming ? "STOPPING..." : "STARTING...") : streaming ? "TAP TO STOP" : "TAP TO START";
         }
 
         /// <summary>A tap on a pill opens the Network and login section, where the addresses and switches are.</summary>

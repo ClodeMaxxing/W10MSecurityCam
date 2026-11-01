@@ -159,19 +159,19 @@
 
         <ScrollViewer Grid.Column="1" Background="#050805" VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="10,6,10,10">
-                <Grid Margin="0,0,0,8">
-                    <TextBlock x:Name="TitleText" Text="W10MSecurityCam" FontSize="20" FontWeight="SemiBold" Foreground="#E4F5E7" VerticalAlignment="Bottom" />
-                    <TextBlock x:Name="VersionText" Text="" FontSize="11" FontWeight="Bold" Foreground="#39FF14" HorizontalAlignment="Right" VerticalAlignment="Top" />
-                </Grid>
-
                 <!-- MAIN: what is needed day to day. Everything else folds away below. -->
-                <!-- Status card, first: its header row (recording light, state, resolution, viewers) is the button that starts and
-                     stops the stream (StartButton; UpdateStatusCard / UpdateStreamButton), then the big numbers and the tiles. -->
+                <!-- Status card, first: the app name as its top band, then its header row (recording light, state, resolution,
+                     viewers), which is the button that starts and stops the stream (StartButton; UpdateStatusCard /
+                     UpdateStreamButton), then the big numbers and the tiles. -->
                 <Border Background="#07140B" BorderBrush="#1F3A26" BorderThickness="1" CornerRadius="6" Padding="10,0,10,8" Margin="0,0,0,6">
                     <StackPanel>
+                        <Grid Margin="-10,0,-10,0" Padding="10,6,10,5" Background="#050A06" BorderBrush="#1F3A26" BorderThickness="0,0,0,1">
+                            <TextBlock x:Name="TitleText" Text="W10MSecurityCam" FontSize="20" FontWeight="SemiBold" Foreground="#E4F5E7" VerticalAlignment="Bottom" />
+                            <TextBlock x:Name="VersionText" Text="" FontSize="11" FontWeight="Bold" Foreground="#39FF14" HorizontalAlignment="Right" VerticalAlignment="Top" />
+                        </Grid>
                         <Button x:Name="StartButton" Style="{StaticResource BarButton}" Margin="-10,0,-10,6" BorderThickness="0,0,0,1" Click="StartButton_Click" IsEnabled="False">
                             <Grid>
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                                 <Border x:Name="StreamBar" Style="{StaticResource BarLight}" />
                                 <StackPanel Grid.Column="1" Orientation="Horizontal">
                                     <Ellipse x:Name="StatusDot" Width="11" Height="11" Fill="#3A1414" Stroke="#5A2020" StrokeThickness="1" VerticalAlignment="Center" Margin="0,0,8,0" />
@@ -183,7 +183,6 @@
                                         <TextBlock x:Name="ViewersText" Text="0 viewers" FontSize="11" Foreground="#9CF0B0" />
                                     </Border>
                                 </StackPanel>
-                                <TextBlock x:Name="StreamStateText" Grid.Column="2" Text="TAP TO START" Style="{StaticResource BarState}" />
                             </Grid>
                         </Button>
                         <TextBlock x:Name="StatsText" Text="" FontFamily="Consolas" FontSize="20" Foreground="#E4F5E7" Margin="0,0,0,0" Visibility="Collapsed" />
