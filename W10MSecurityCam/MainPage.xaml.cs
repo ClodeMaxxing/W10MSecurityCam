@@ -563,7 +563,7 @@ namespace W10MSecurityCam
         private void UpdateStatusCard(bool streaming)
         {
             int viewers = _server.ClientCount;
-            StateText.Text = _protect ? "HEAT PROTECTION" : streaming ? "STREAMING" : "STOPPED";
+            StateText.Text = _protect ? "HEAT PROTECTION" : streaming ? "STREAMING" : !StartButton.IsEnabled ? "STARTING..." : "START STREAM";
             StateText.Foreground = _protect ? Brush(0xFF, 0x6B, 0x6B) : streaming ? Brush(0x9C, 0xF0, 0xB0) : Brush(0x8F, 0xB5, 0x96);
             // the recording light: red while streaming (pulsing), dark red when stopped
             StatusDot.Fill = streaming ? Brush(0xFF, 0x30, 0x30) : Brush(0x3A, 0x14, 0x14);
@@ -578,10 +578,12 @@ namespace W10MSecurityCam
             var dim = Brush(0x7F, 0xAE, 0x86); var bright = Brush(0xFF, 0xFF, 0xFF);
             FpsTileText.Text = streaming ? _camera.Fps.ToString("0") : "-";
             MbpsTileText.Text = streaming ? _camera.Mbps.ToString("0.0") : "-";
-            ResText.Text = _resLabel ?? "-";
             ViewersText.Text = streaming ? viewers.ToString() : "-";
             FpsTileText.Foreground = MbpsTileText.Foreground = ViewersText.Foreground = streaming ? bright : dim;
-            ResText.Foreground = _resLabel != null ? bright : dim;
+            // the format pill on the stream row: lit while streaming, the chosen format dimmed while stopped
+            ResText.Text = _resLabel ?? "-";
+            ResText.Foreground = streaming ? Brush(0xCF, 0xFF, 0xD2) : dim;
+            ResPill.BorderBrush = streaming ? GreenFill : Brush(0x2A, 0x4A, 0x32);
             NormalModeButton.Visibility = _camera != null && !_camera.UseNativeSink ? Visibility.Visible : Visibility.Collapsed; // safe mode: the way back
             UpdateServicePills(streaming);
             if (!_blackedOut || BlackoutOverlay.Visibility != Visibility.Visible) UpdateTiles(streaming); // nobody sees them under the black overlay

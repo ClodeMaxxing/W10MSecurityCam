@@ -176,19 +176,23 @@
                             <TextBlock x:Name="TitleText" Text="W10MSecurityCam" FontSize="20" FontWeight="SemiBold" Foreground="#E4F5E7" VerticalAlignment="Bottom" />
                             <TextBlock x:Name="VersionText" Text="" FontSize="11" FontWeight="Bold" Foreground="#39FF14" HorizontalAlignment="Right" VerticalAlignment="Top" />
                         </Grid>
-                        <Button x:Name="StartButton" Style="{StaticResource BarButton}" Margin="-10,0,-10,4" Padding="0,12,10,12" BorderThickness="0,0,0,1" Click="StartButton_Click" IsEnabled="False">
+                        <!-- Fixed height (the label and the format pill never wrap), so the card does not jump between states. -->
+                        <Button x:Name="StartButton" Style="{StaticResource BarButton}" Height="46" Margin="-10,0,-10,4" Padding="0,0,10,0" BorderThickness="0,0,0,1" Click="StartButton_Click" IsEnabled="False">
                             <Grid>
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                                <Border x:Name="StreamBar" Style="{StaticResource BarLight}" />
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                <Border x:Name="StreamBar" Style="{StaticResource BarLight}" Margin="0,9,10,9" />
                                 <StackPanel Grid.Column="1" Orientation="Horizontal">
                                     <Ellipse x:Name="StatusDot" Width="12" Height="12" Fill="#3A1414" Stroke="#5A2020" StrokeThickness="1" VerticalAlignment="Center" Margin="0,0,9,0" />
-                                    <TextBlock x:Name="StateText" Text="STOPPED" FontSize="15" FontWeight="SemiBold" Foreground="#9CF0B0" CharacterSpacing="80" VerticalAlignment="Center" />
+                                    <TextBlock x:Name="StateText" Text="START STREAM" FontSize="14" FontWeight="SemiBold" Foreground="#8FB596" CharacterSpacing="60" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                                 </StackPanel>
+                                <Border x:Name="ResPill" Grid.Column="2" BorderBrush="#2A4A32" BorderThickness="1" CornerRadius="9" Background="#0B1A10" Padding="7,0,7,1" Margin="6,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock x:Name="ResText" Text="-" FontFamily="Consolas" FontSize="11" Foreground="#8FB596" />
+                                </Border>
                             </Grid>
                         </Button>
-                        <!-- The stream's own numbers: four tiles above the phone tiles (UpdateStatusCard). -->
+                        <!-- The stream's own numbers: three tiles above the phone tiles (UpdateStatusCard). -->
                         <Grid Margin="-2,2,-2,0">
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                             <Border Grid.Column="0" Style="{StaticResource Tile}" BorderBrush="#1F3A26">
                                 <StackPanel><TextBlock Text="FPS" Style="{StaticResource TileLabel}" /><TextBlock x:Name="FpsTileText" Text="-" Style="{StaticResource TileBig}" /></StackPanel>
                             </Border>
@@ -196,9 +200,6 @@
                                 <StackPanel><TextBlock Text="MBPS" Style="{StaticResource TileLabel}" /><TextBlock x:Name="MbpsTileText" Text="-" Style="{StaticResource TileBig}" /></StackPanel>
                             </Border>
                             <Border Grid.Column="2" Style="{StaticResource Tile}" BorderBrush="#1F3A26">
-                                <StackPanel><TextBlock Text="FORMAT" Style="{StaticResource TileLabel}" /><TextBlock x:Name="ResText" Text="-" Style="{StaticResource TileBig}" /></StackPanel>
-                            </Border>
-                            <Border Grid.Column="3" Style="{StaticResource Tile}" BorderBrush="#1F3A26">
                                 <StackPanel><TextBlock Text="VIEWERS" Style="{StaticResource TileLabel}" /><TextBlock x:Name="ViewersText" Text="-" Style="{StaticResource TileBig}" /></StackPanel>
                             </Border>
                         </Grid>
