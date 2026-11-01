@@ -122,17 +122,17 @@ namespace W10MSecurityCam.Rtsp
         /// header come from the request; wrong logins are counted per 'remoteIp'. 'stale': the login was right but the
         /// nonce is old or unknown, so the client should retry with the new one (no password prompt).
         /// </summary>
-        public bool Check(string method, string requestUri, string authorization, string remoteIp, out bool stale)
+        public bool Check(string method, string requestUri, string authorization, string remoteIp, out bool stale, bool rtsp = false)
         {
             stale = false;
             if (IsLockedOut(remoteIp) || string.IsNullOrEmpty(authorization)) return false;
-            bool ok = Verify(method, requestUri, authorization, out stale);
+            bool ok = Verify(method, requestUri, authorization, rtsp, out stale);
             if (ok) { if (!string.IsNullOrEmpty(remoteIp)) lock (_lock) _failures.Remove(remoteIp); }
             else if (!stale) NoteFailure(remoteIp);
             return ok;
         }
 
-        private bool Verify(string method, string requestUri, string authorization, out bool stale)
+        private bool Verify(string method, string requestUri, string authorization, bool rtsp, out bool stale)
         {
             stale = false;
             string user, password;
@@ -158,7 +158,10 @@ namespace W10MSecurityCam.Rtsp
                 !p.TryGetValue("uri", out uri) || !p.TryGetValue("response", out response))
                 return false;
             if (!FixedEquals(pu, user) || realm != Realm) return false;
-            if (NormalizeUri(uri) != NormalizeUri(requestUri)) return false; // a response made for another URL
+            // A response made for another URL is refused. RTSP: live555 (VLC, many NVRs) signs every request with the
+            // session's base URL (rtsp://phone/live/), also SETUP for .../live/trackID=0, so a URL under the signed one counts.
+            string nu = NormalizeUri(uri), nr = NormalizeUri(requestUri);
+            if (nu != nr && !(rtsp && nu.Length > 0 && nr.StartsWith(nu + "/", StringComparison.Ordinal))) return false;
             if (nonce.Length == 0 || nonce.Length > 64 || !nonce.All(IsHex)) return false;
 
             string ha1 = Md5(user + ":" + Realm + ":" + password);

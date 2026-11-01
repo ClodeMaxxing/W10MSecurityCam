@@ -289,7 +289,7 @@ namespace W10MSecurityCam.Rtsp
                 h.TryGetValue("Authorization", out var authorization);
                 bool locked = _server.Auth.IsLockedOut(_ip); // too many wrong logins: 401 without looking
                 bool stale = false;
-                if (locked || !_server.Auth.Check(method, url, authorization, _ip, out stale))
+                if (locked || !_server.Auth.Check(method, url, authorization, _ip, out stale, rtsp: true))
                 {
                     if (!string.IsNullOrEmpty(authorization) && !locked && !stale) Log("wrong user name or password");
                     Respond(cseq, 401, "Unauthorized", _server.Auth.Challenge(stale), "", quiet: true);
