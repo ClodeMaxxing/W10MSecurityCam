@@ -104,6 +104,9 @@ button.tog.on{background:#18452b;color:#39ff14;border-color:#39ff14;box-shadow:0
 <div id='spanel' style='margin-left:18px'>
 <div><label><input type='checkbox' id='so'> <span id='sol'>Stabilization off (fixed mount)</span></label></div>
 <div><label><input type='checkbox' id='sf'> Hold focus once it has settled</label></div></div></div>
+<h2>Network</h2>
+<div class='row'><label><input type='checkbox' id='lgo'> Log page</label> <span id='lglinks'><a href='/log' target='_blank' style='color:#9cf0b0'>/log</a></span><i class='tip' data-tip='The app log at /log, also used by tools\Get-Phone-Log.cmd. Off by default. The web page itself can only be switched off on the phone.'>i</i></div>
+<div class='row'><label><input type='checkbox' id='sgo'> Stats page</label> <span id='sglinks'><a href='/stats' target='_blank' style='color:#9cf0b0'>/stats</a></span><i class='tip' data-tip='Graphs of the last 12 hours (frame rate, bitrate, latency, battery, power, CPU, memory, heat). Samples every 30 s only while this is on. Off by default.'>i</i></div>
 <h2>Login</h2>
 <div class='row'><div class='sub' style='margin-bottom:6px'><span id='lmsg'>One login protects the stream and this page.</span><i class='tip' data-tip='Use the new login in your NVR / VLC: rtsp://USER:PASSWORD@phone-address:8554/live. The browser asks you to sign in again after a change.'>i</i></div>
 <input id='lc' type='password' placeholder='Current password'> <input id='lu' placeholder='User name'> <input id='lp' type='password' placeholder='New password'> <input id='lp2' type='password' placeholder='Repeat password'>
@@ -202,6 +205,8 @@ function render(){
  ['all','fa','ea','wa'].forEach(function(i){$(i).disabled=!w});
  $('fs').disabled=!w||st.focusAuto;$('es').disabled=!w||st.exposureAuto;$('ws').disabled=!w||st.wbAuto;
  labels();
+ $('lgo').checked=!!st.logOn;$('lgo').disabled=!w;$('lglinks').style.display=st.logOn?'':'none';
+ $('sgo').checked=!!st.statsOn;$('sgo').disabled=!w;$('sglinks').style.display=st.statsOn?'':'none';
  $('ro').style.display=w?'none':'flex';
  $('rotext').textContent='View only. Changes need the stream login'+(st.defaultLogin?' (default admin / admin)':'')+'.';
 }
@@ -225,6 +230,8 @@ function load(){
 }
 function later(body){clearTimeout(t);t=setTimeout(function(){send(body)},400)}
 $('loginb').onclick=function(){location.href='/login'};
+$('lgo').onchange=function(){touched=Date.now();send('log='+(this.checked?'on':'off'))};
+$('sgo').onchange=function(){touched=Date.now();send('stats='+(this.checked?'on':'off'))};
 $('lb').onclick=function(){
  var u=$('lu').value.trim(),p=$('lp').value;
  if(p!==$('lp2').value){$('msg').textContent='The two passwords differ';return}

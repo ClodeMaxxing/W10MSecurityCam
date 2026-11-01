@@ -156,6 +156,7 @@ namespace W10MSecurityCam
             _tuningTimer.Tick += async (s, e) => { _tuningTimer.Stop(); await ApplyTuningAsync(); };
             _server.Http = _api;
             _logServer = new LogServer(_api) { Log = Log };
+            LoadServerSettings();
             _healthTimer.Tick += (s, e) => { CheckPower(); CheckMemory(); };
             _statsTimer.Tick += (s, e) => UpdateStats();
             _wakeTimer.Tick += WakeTimer_Tick;
@@ -194,7 +195,7 @@ namespace W10MSecurityCam
             {
                 // Servers first, so the log is reachable even if the camera fails.
                 try { await _server.StartAsync(); } catch (Exception ex) { Log("Video server: " + ex.Message); }
-                try { await _logServer.StartAsync(LogPort); } catch (Exception ex) { Log("Log server: " + ex.Message); }
+                if (_webOn) try { await _logServer.StartAsync(LogPort); } catch (Exception ex) { Log("Web server: " + ex.Message); }
 
                 if (_selfCheckReset) { _selfCheckReset = false; Log("SELF-CHECK: the app failed to start twice in a row, so its saved settings were reset to defaults (the stream login is kept)."); }
                 Log("Starting camera...");
@@ -318,9 +319,10 @@ namespace W10MSecurityCam
                 .Where(ip => !ip.StartsWith("169.254.")) // link-local addresses aren't reachable from the PC
                 .ToList();
             _shownIps = string.Join(",", ips);
+            _ips = ips;
+            UpdateServerUi(); // the web page addresses (or "off")
             var lines = ips.Select(ip => "rtsp://" + ip + ":" + RtspPort + StreamPath).ToList();
             lines.Add("USB: rtsp://127.0.0.1:" + UsbPort + StreamPath);
-            lines.Add("USB settings page: http://127.0.0.1:" + UsbPort + "/camera");
             AddressText.Text = string.Join("\n", lines);
             UpdateLoginUi();
             Log("Addresses: " + string.Join("  ", lines) + (ips.Count > 0 ? "  (log: http://" + ips[0] + ":" + LogPort + ")" : ""));
@@ -1619,6 +1621,7 @@ namespace W10MSecurityCam
             o["wb"] = JsonValue.CreateNumberValue(_tuning.WhiteBalanceKelvin);
             o["wbMin"] = JsonValue.CreateNumberValue(_tuning.WbMin > 0 ? _tuning.WbMin : 2000);
             o["wbMax"] = JsonValue.CreateNumberValue(_tuning.WbMax > _tuning.WbMin ? _tuning.WbMax : 8000);
+            AddServerJson(o);
             return o.Stringify();
         }
 
@@ -1699,6 +1702,7 @@ namespace W10MSecurityCam
                 _settings.Values["AllowBasic"] = _server.Auth.AllowBasic;
                 done.Add("basic " + (_server.Auth.AllowBasic ? "on" : "off"));
             }
+            await ApplyServerConfigAsync(form, done);
             await ApplyExtraConfigAsync(form, done);
             string summary = done.Count > 0 ? "Changed: " + string.Join(", ", done) : "Nothing changed";
             Log("Config over USB: " + summary);
@@ -1710,6 +1714,7 @@ namespace W10MSecurityCam
 
         private string ExtraConfigText() =>
             // Runs on a network thread: only cached strings here, never the on-screen controls.
+            ServerConfigText() +
             "format=" + (_currentFormat ?? (_settings.Values["Format"] as string ?? "")) + "\n" +
             "bitrate=" + (_currentBitrate ?? "") + "\n" +
             "highbw=" + (_highBw ? "on" : "off") + " (bitrates above 24 Mbps need it; use 5 GHz Wi-Fi or USB-C)\n" +
@@ -1725,7 +1730,7 @@ namespace W10MSecurityCam
             "snapshot=" + (_snapshotsOn ? "on" : "off") +
             (_camera != null ? (_camera.PhotoWhileRecordingSupported ? "" : " (this camera can't take photos while recording)") : "") + "\n";
 
-        private string ExtraConfigHelp() => ", stream=start|stop|restart, engine=normal, probe=devices|power, powersave=on|off, savepower=on|off, saveois|savefocus=on|off, torch=on|off, focus=once, highbw=on|off, camera=auto|manual, focus=auto|manual|0-100, exposure=auto|manual|MS, wb=auto|manual|KELVIN, format=WIDTHxHEIGHT@FPS, bitrate=MBPS|auto, audio=on|off, udp=on|off, snapshot=on|off";
+        private string ExtraConfigHelp() => ", stream=start|stop|restart, engine=normal, probe=devices|power, powersave=on|off, savepower=on|off, saveois|savefocus=on|off, torch=on|off, focus=once, highbw=on|off, camera=auto|manual, focus=auto|manual|0-100, exposure=auto|manual|MS, wb=auto|manual|KELVIN, format=WIDTHxHEIGHT@FPS, bitrate=MBPS|auto, audio=on|off, udp=on|off, snapshot=on|off, log=on|off, stats=on|off";
 
         private static string FormatKey(FormatOption f) => f.Width + "x" + f.Height + "@" + Math.Round(f.Fps);
 

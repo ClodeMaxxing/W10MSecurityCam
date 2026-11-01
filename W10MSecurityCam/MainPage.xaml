@@ -266,6 +266,12 @@
                     <TextBlock Text="RTSP address (NVR / VLC):" Foreground="#7F9A86" FontSize="12" />
                     <TextBlock x:Name="AddressText" Text="…" IsTextSelectionEnabled="True" TextWrapping="Wrap"
                                FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" />
+                    <ToggleSwitch x:Name="WebServerToggle" Header="Web page (settings and status)" IsOn="True" Toggled="WebServerToggle_Toggled" />
+                    <TextBlock Text="Lets a browser on the same Wi-Fi (or the PC on the USB cable) see the status and, with the login, change settings. Off: only the stream is served. Only the phone can switch it back on." Foreground="#7F9A86" FontSize="12" TextWrapping="Wrap" Margin="0,-4,0,4" />
+                    <TextBlock x:Name="WebAddressText" Text="…" IsTextSelectionEnabled="True" TextWrapping="Wrap" FontSize="12" Margin="0,0,0,8" />
+                    <ToggleSwitch x:Name="LogServerToggle" Header="Log page (/log)" IsOn="False" Toggled="LogServerToggle_Toggled" />
+                    <ToggleSwitch x:Name="StatsServerToggle" Header="Stats page (/stats)" IsOn="False" Toggled="StatsServerToggle_Toggled" />
+                    <TextBlock Text="The app's log in a browser (also for tools\Get-Phone-Log.cmd), and graphs of the last 12 hours (frame rate, bitrate, battery, power, CPU, memory, heat; a sample every 30 s only while on). Both need the web page on." Foreground="#7F9A86" FontSize="12" TextWrapping="Wrap" Margin="0,-4,0,6" />
                     <ToggleSwitch x:Name="AutoStartToggle" Header="Start streaming when the app opens" IsOn="True" Toggled="AutoStartToggle_Toggled" />
                     <ToggleSwitch x:Name="UdpToggle" Header="Allow RTP over UDP" IsOn="False" Toggled="UdpToggle_Toggled" />
                     <TextBlock Text="TCP is more reliable on Wi-Fi." Foreground="#7F9A86" FontSize="12" TextWrapping="Wrap" Margin="0,-4,0,6" />

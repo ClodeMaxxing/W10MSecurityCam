@@ -24,7 +24,9 @@ namespace W10MSecurityCam.Streaming
 
     /// <summary>
     /// The small web interface, served on the log port (http://PHONE-IP:5001) and on the RTSP ports:
-    ///   /             the app log (plain text)
+    ///   /, /camera    the settings page
+    ///   /log          the app log (plain text) - only with the Log page switch on
+    ///   /stats        graphs of the last 12 hours of status samples - only with the Stats page switch on
     ///   /status       health as JSON (for monitoring)
     ///   /snapshot.jpg the latest picture, when snapshots are turned on (needs the login)
     ///   /config       view (GET) or change (POST, form fields) settings - only over the USB cable
@@ -44,12 +46,20 @@ namespace W10MSecurityCam.Streaming
         public Func<string> GetCameraJson = () => "{}";
         public DigestAuth Auth;
         public Action<string> Log = _ => { };
+        /// <summary>The phone's Network switches: the web page (every page and JSON), the log page and the stats page.</summary>
+        public volatile bool WebEnabled = true, LogEnabled, StatsEnabled;
+        /// <summary>The stats samples as JavaScript string literals, for the stats page.</summary>
+        public Func<string> GetStatsRows = () => "";
+
+        private static byte[] SwitchedOff(string what) =>
+            Reply(403, "Forbidden", "text/plain", "The " + what + " is switched off. Switch it on on the phone (Network and login)" + (what == "web page" ? "" : " or on the settings page") + ".\n");
 
         public async Task<byte[]> HandleAsync(HttpRequest r)
         {
             try
             {
                 string path = r.Path.TrimEnd('/');
+                if (!WebEnabled) return SwitchedOff("web page");
                 // The pages, the log and the JSON are view only without a login (as in W10MWebCam). Changes, the snapshot
                 // and /login need the stream login, over USB too: any program or web page on the PC the phone is plugged
                 // into can reach the USB port, so being on USB proves nothing. A login the browser sends must be right,
@@ -61,8 +71,8 @@ namespace W10MSecurityCam.Streaming
                 bool canWrite = false, stale = false;
                 if (Auth != null && authorization != null && !(canWrite = Auth.Check(r.Method, r.Target, authorization, r.RemoteIp, out stale)))
                     return Reply(401, "Unauthorized", "text/plain", "Login required\n", Auth.Challenge(stale));
-                if (path == "" || path == "/log")
-                    return Reply(200, "OK", "text/plain; charset=utf-8", GetLog());
+                if (path == "/log")
+                    return LogEnabled ? Reply(200, "OK", "text/plain; charset=utf-8", GetLog(), "Cache-Control: no-store\r\n") : SwitchedOff("log page");
 
                 if (path == "/status")
                     return Reply(200, "OK", "application/json", GetStatusJson());
@@ -84,8 +94,8 @@ namespace W10MSecurityCam.Streaming
                     return Reply(200, "OK", "image/jpeg", jpg, "Cache-Control: no-store\r\n");
                 }
 
-                if (path == "/camera" || path == "/camera/state" || path == "/camera/set")
-                    return await HandleCameraAsync(r, path, canWrite, stale);
+                if (path == "" || path == "/camera" || path == "/camera/state" || path == "/camera/set")
+                    return await HandleCameraAsync(r, path == "" ? "/camera" : path, canWrite, stale);
 
                 if (path == "/config")
                 {
@@ -106,7 +116,7 @@ namespace W10MSecurityCam.Streaming
                     return Reply(200, "OK", "text/plain; charset=utf-8", GetConfig());
                 }
 
-                return Reply(404, "Not Found", "text/plain", "Not found. Try / (log), /status, /camera, /snapshot.jpg\n");
+                return Reply(404, "Not Found", "text/plain", "Not found. Try /camera, /status, /log, /stats, /snapshot.jpg\n");
             }
             catch (Exception ex)
             {
@@ -136,7 +146,7 @@ namespace W10MSecurityCam.Streaming
                 if (refused != null) return Reply(403, "Forbidden", "text/plain", refused);
                 var all = ParseForm(r.Body); // changes only in the body, never in the URL
                 var only = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                foreach (var k in new[] { "camera", "focus", "exposure", "wb", "format", "bitrate", "highbw", "powersave", "stream", "engine", "user", "password", "savepower", "saveois", "savefocus", "probe", "torch" })
+                foreach (var k in new[] { "camera", "focus", "exposure", "wb", "format", "bitrate", "highbw", "powersave", "stream", "engine", "user", "password", "savepower", "saveois", "savefocus", "probe", "torch", "log", "stats" })
                     if (all.TryGetValue(k, out var v)) only[k] = v;
                 string bad = CheckLoginFields(only) ?? CheckCurrentPassword(only, all);
                 if (bad != null) result = bad;

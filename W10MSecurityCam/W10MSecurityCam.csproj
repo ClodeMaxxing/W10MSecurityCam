@@ -84,6 +84,7 @@
       <DependentUpon>MainPage.xaml</DependentUpon>
     </Compile>
     <Compile Include="MainPage.Power.cs" />
+    <Compile Include="MainPage.Servers.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Streaming\CameraEngine.cs" />
     <Compile Include="Streaming\Mp4TapStream.cs" />
