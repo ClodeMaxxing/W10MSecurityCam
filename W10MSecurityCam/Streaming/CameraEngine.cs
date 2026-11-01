@@ -316,13 +316,6 @@ namespace W10MSecurityCam.Streaming
             catch { return false; }
         }
 
-        /// <summary>Forget remembered encoder setups (used if a stream ever fails to decode).</summary>
-        public static void ClearEncoderCache()
-        {
-            var values = ApplicationData.Current.LocalSettings.Values;
-            foreach (var k in values.Keys.Where(k => k.StartsWith("Enc|")).ToList()) values.Remove(k);
-        }
-
         private async Task<Tuple<H264Config, double>> RecordProbeAsync(MediaEncodingProfile profile)
         {
             var file = await ApplicationData.Current.TemporaryFolder.CreateFileAsync("probe.mp4", CreationCollisionOption.ReplaceExisting);

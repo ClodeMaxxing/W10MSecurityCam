@@ -122,7 +122,6 @@ namespace W10MSecurityCam
             LaunchSelfCheck();
             InitializeComponent();
 
-            var v = Package.Current.Id.Version;
             VersionText.Text = "v" + AppVersion;
 
             Application.Current.UnhandledException += (s, e) => { Log("CRASH (unhandled): " + e.Exception); FlushLog(); };
@@ -142,7 +141,8 @@ namespace W10MSecurityCam
             _snapshotsOn = _settings.Values["Snapshots"] is bool sn && sn;
             _audioOn = _settings.Values["Audio"] is bool ao && ao;
             _tuning.Log = Log;
-            if (_settings.Values["CamAuto"] is bool ca) _tuning.Auto = ca; // 1.6.0 / 1.6.1: one switch for all three
+            bool oldAuto = false;
+            if (_settings.Values["CamAuto"] is bool ca) { _tuning.Auto = ca; oldAuto = true; } // 1.6.0 / 1.6.1: one switch for all three
             if (_settings.Values["CamFocusAuto"] is bool cfa) _tuning.FocusAuto = cfa;
             if (_settings.Values["CamExposureAuto"] is bool cea) _tuning.ExposureAuto = cea;
             if (_settings.Values["CamWbAuto"] is bool cwa) _tuning.WbAuto = cwa;
@@ -151,6 +151,7 @@ namespace W10MSecurityCam
             if (_settings.Values["CamWbK"] is int cw) _tuning.WhiteBalanceKelvin = (uint)cw;
             if (_settings.Values["SaveOis"] is bool so) _tuning.SaveOis = so;
             if (_settings.Values["SaveFocus"] is bool sf) _tuning.SaveFocus = sf;
+            if (oldAuto) { SaveTuning(); _settings.Values.Remove("CamAuto"); } // kept as the three switches from now on
             _saveTimer.Tick += async (s, e) => { _saveTimer.Stop(); await ApplyPowerChangeAsync(); };
             _tuningTimer.Tick += async (s, e) => { _tuningTimer.Stop(); await ApplyTuningAsync(); };
             _server.Http = _api;
@@ -232,7 +233,11 @@ namespace W10MSecurityCam
                     _applyingSettings = false;
                 }
                 else if (_settings.Values["Bitrate"] is int savedBitrate && savedBitrate >= 0 && savedBitrate < BitrateBox.Items.Count)
-                    BitrateBox.SelectedIndex = savedBitrate;
+                {
+                    BitrateBox.SelectedIndex = savedBitrate; // a list index, saved by versions before BitrateBps
+                    _settings.Values["BitrateBps"] = (int)((BitrateBox.SelectedItem as BitrateOption)?.Bps ?? 0);
+                }
+                _settings.Values.Remove("Bitrate");
                 if (_settings.Values["Keyframe"] is int kf && kf >= 0 && kf < KeyframeBox.Items.Count)
                     KeyframeBox.SelectedIndex = kf;
                 AutoStartToggle.IsOn = !(_settings.Values["AutoStart"] is bool b0) || b0;
@@ -376,14 +381,12 @@ namespace W10MSecurityCam
                     if (!_protect)
                     {
                         _settings.Values["BitrateBps"] = (int)(b?.Bps ?? 0);
-                        _settings.Values["Bitrate"] = BitrateBox.SelectedIndex;
                     }
                     _settings.Values["Keyframe"] = KeyframeBox.SelectedIndex;
 
                     _settings.Values["StartInProgress"] = true; // cleared after 15 s of healthy streaming
                     _startedAt = DateTime.Now;
                     _streamBeganAt = DateTime.Now;
-                    _targetFps = f.Fps;
                     // Switch the preview off BEFORE recording starts; changing it mid-recording stalls the 4K pipeline.
                     await _camera.SetPreviewAsync(PreviewWanted);
                     _server.ResetStream(); // connected viewers wait for the new stream's first keyframe
@@ -1128,7 +1131,6 @@ namespace W10MSecurityCam
 
         private void SaveTuning()
         {
-            _settings.Values["CamAuto"] = _tuning.Auto;
             _settings.Values["CamFocusAuto"] = _tuning.FocusAuto;
             _settings.Values["CamExposureAuto"] = _tuning.ExposureAuto;
             _settings.Values["CamWbAuto"] = _tuning.WbAuto;
@@ -1310,15 +1312,13 @@ namespace W10MSecurityCam
         // ------------------------------------------------------------------ status block (phone screen and web page)
 
         private DateTime _streamBeganAt = DateTime.MinValue;
-        private double _targetFps;
-        private int _lowFpsSeconds;
         private string _heat = "n/a";
         private string _heatDetail = "";
         private bool _heatWarn;
 
         /// <summary>
         /// Windows 10 Mobile gives apps no temperature reading. The only honest signal is indirect: a phone that is
-        /// too hot throttles, and the frame rate falls below the selected rate for a long time.
+        /// too hot stops charging (status Idle) although the charger is fine (see UpdateHeatHint).
         /// </summary>
         private int _pausedSecs, _chargingSecs;
 
