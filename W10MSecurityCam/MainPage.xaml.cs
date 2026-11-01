@@ -240,6 +240,7 @@ namespace W10MSecurityCam
                     KeyframeBox.SelectedIndex = kf;
                 AutoStartToggle.IsOn = !(_settings.Values["AutoStart"] is bool b0) || b0;
                 LoadDisplaySettings();
+                LoadHeatProtectSetting();
 
                 bool crashedLastTime = _settings.Values["StartInProgress"] is bool sip && sip;
                 bool autoStarting = AutoStartToggle.IsOn && !crashedLastTime;
@@ -1157,7 +1158,8 @@ namespace W10MSecurityCam
             _pausedSecs = paused ? _pausedSecs + 1 : 0;
             _chargingSecs = charging ? _chargingSecs + 1 : 0;
             // 20 s of paused charging = hot (a brief pause is not); back to normal after 30 s of charging again.
-            if (!_protect && _pausedSecs >= 20) { var _e = EnterProtectionAsync(); }
+            // Heat protection off (Power): the phone is left alone, hot or not - the person was warned the battery drains.
+            if (!_protect && _pausedSecs >= 20 && _heatProtectOn) { var _e = EnterProtectionAsync(); }
             else if (_protect && _chargingSecs >= 30 && (DateTime.Now - _protectSince).TotalMinutes >= 3) { var _x = LeaveProtectionAsync(); }
             else if (_protectRestartOwed && !_protectBusy && !_busy) { var _r = RestartStreamForProtectionAsync(); }
             _heatWarn = paused || _protect;
@@ -1173,6 +1175,47 @@ namespace W10MSecurityCam
         // flashlight; put the person's own settings back once charging resumes. The forced values are never written to the
         // saved settings, so an app restart in between also comes back with the person's own choices.
         private bool _protect, _protectBusy, _protectRestartOwed;
+        private bool _heatProtectOn = true, _loadingHeatUi; // the Heat protection switch (Power); off = never enter protection
+
+        private void LoadHeatProtectSetting()
+        {
+            _heatProtectOn = !(_settings.Values["HeatProtect"] is bool h) || h;
+            _loadingHeatUi = true;
+            try { HeatProtectToggle.IsOn = _heatProtectOn; } finally { _loadingHeatUi = false; }
+        }
+
+        /// <summary>Off asks first: without heat protection a hot phone keeps full video and the screen, and on a weak charger the battery drains.</summary>
+        private async void HeatProtectToggle_Toggled(object sender, RoutedEventArgs e)
+        {
+            if (_loadingHeatUi) return;
+            if (!HeatProtectToggle.IsOn)
+            {
+                var dlg = new ContentDialog
+                {
+                    Title = "Turn heat protection off?",
+                    Content = "When the phone gets hot, nothing will be done about it: full video, the screen as set, the flashlight free. "
+                        + "On a charger that can't keep up (a PC USB port, a small adapter) the battery drains until the phone dies.",
+                    PrimaryButtonText = "Turn off",
+                    CloseButtonText = "Keep it on"
+                };
+                if (await dlg.ShowAsync() != ContentDialogResult.Primary)
+                {
+                    _loadingHeatUi = true;
+                    try { HeatProtectToggle.IsOn = true; } finally { _loadingHeatUi = false; }
+                    return;
+                }
+            }
+            SetHeatProtect(HeatProtectToggle.IsOn);
+        }
+
+        /// <summary>From the switch or the web page (heatprotect=on|off). Off while protection runs: it is left as it is until charging resumes.</summary>
+        private void SetHeatProtect(bool on)
+        {
+            _heatProtectOn = on;
+            _settings.Values["HeatProtect"] = on;
+            if (HeatProtectToggle.IsOn != on) { _loadingHeatUi = true; try { HeatProtectToggle.IsOn = on; } finally { _loadingHeatUi = false; } }
+            Log("Heat protection " + (on ? "on" : "OFF (the phone will not slow down when hot; on a weak charger the battery drains)"));
+        }
         private bool _pOis, _pFocus;
         private string _pFormatKey = "", _pBitrateKey = "";
         private DateTime _protectSince = DateTime.MinValue;
@@ -1274,6 +1317,8 @@ namespace W10MSecurityCam
             VideoAlert.Visibility = _protect ? Visibility.Visible : Visibility.Collapsed;
             KeepPreviewToggle.IsEnabled = free;
             PowerSaveToggle.IsEnabled = free;
+            ScreensaverButton.IsEnabled = free;
+            UpdatePreviewText();
         }
 
         private static string BatterySaverText()
@@ -1410,6 +1455,7 @@ namespace W10MSecurityCam
             o["saveFocus"] = JsonValue.CreateBooleanValue(_tuning.SaveFocus);
             o["oisSupported"] = JsonValue.CreateBooleanValue(_tuning.OisSupported);
             o["protect"] = JsonValue.CreateBooleanValue(_protect);
+            o["heatProtect"] = JsonValue.CreateBooleanValue(_heatProtectOn);
             o["preview"] = JsonValue.CreateBooleanValue(PreviewToggle.IsOn);
             o["keepPreview"] = JsonValue.CreateBooleanValue(KeepPreviewToggle.IsOn);
             o["powerSave"] = JsonValue.CreateBooleanValue(PowerSaveToggle.IsOn);
@@ -1555,7 +1601,7 @@ namespace W10MSecurityCam
             "snapshot=" + (_snapshotsOn ? "on" : "off") +
             (_camera != null ? (_camera.PhotoWhileRecordingSupported ? "" : " (this camera can't take photos while recording)") : "") + "\n";
 
-        private string ExtraConfigHelp() => ", stream=start|stop|restart, engine=normal, probe=devices|power, powersave=on|off, preview=on|off, keeppreview=on|off, savepower=on|off, saveois|savefocus=on|off, torch=on|off, focus=once, highbw=on|off, camera=auto|manual, focus=auto|manual|0-100, exposure=auto|manual|MS, wb=auto|manual|KELVIN, format=WIDTHxHEIGHT@FPS, bitrate=MBPS|auto, audio=on|off, udp=on|off, snapshot=on|off, log=on|off, stats=on|off";
+        private string ExtraConfigHelp() => ", stream=start|stop|restart, engine=normal, probe=devices|power, powersave=on|off, heatprotect=on|off, preview=on|off, keeppreview=on|off, savepower=on|off, saveois|savefocus=on|off, torch=on|off, focus=once, highbw=on|off, camera=auto|manual, focus=auto|manual|0-100, exposure=auto|manual|MS, wb=auto|manual|KELVIN, format=WIDTHxHEIGHT@FPS, bitrate=MBPS|auto, audio=on|off, udp=on|off, snapshot=on|off, log=on|off, stats=on|off";
 
         private static string FormatKey(FormatOption f) => f.Width + "x" + f.Height + "@" + Math.Round(f.Fps);
 
@@ -1782,7 +1828,13 @@ namespace W10MSecurityCam
             {
                 bool on = IsOn(pv);
                 await RunUiAsync(() => { PreviewToggle.IsOn = on; return Task.CompletedTask; }); // its handler saves and applies
-                done.Add("preview on the phone " + (on ? "on" : "off"));
+                done.Add("preview " + (on ? "on" : "off"));
+            }
+            if (form.TryGetValue("heatprotect", out var hp))
+            {
+                bool on = IsOn(hp);
+                await RunUiAsync(() => { SetHeatProtect(on); return Task.CompletedTask; });
+                done.Add("heat protection " + (on ? "on" : "off"));
             }
             if (form.TryGetValue("keeppreview", out var kpv))
             {
