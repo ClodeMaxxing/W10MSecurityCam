@@ -100,6 +100,8 @@ button.tog.on{background:#18452b;color:#39ff14;border-color:#39ff14;box-shadow:0
 <h2>Power</h2>
 <div class='bad' id='ta2' style='display:none;font-weight:bold'>Heat protection: power saving forced on</div>
 <div class='row'><div class='btnrow'><button id='ps'>Black out the phone screen</button><i class='tip' id='pinfo' data-tip='x'>i</i></div></div>
+<div class='row'><label><input type='checkbox' id='pv'> Preview on the phone</label><i class='tip' data-tip='Off by default. On: the picture on the phone while stopped, and while streaming unless the screen is blacked out. Adjusting the camera on the phone shows the picture for 60 s anyway. While streaming a change restarts the stream once.'>i</i></div>
+<div class='row'><label><input type='checkbox' id='kp'> Keep the preview running behind the black screen</label><i class='tip' data-tip='Off by default: the preview costs CPU and heat (about twice the app CPU). On: a tap on the black screen shows the picture at once, with no stream restart. Heat protection switches it off until charging resumes.'>i</i></div>
 <div class='row'><label><input type='checkbox' id='sall'> Power-saving camera features</label><i class='tip' data-tip='Less processing and heat: stabilization off for a fixed mount, and focus held once it has settled. Untick to choose each one. Changing stabilization restarts the stream once.'>i</i>
 <div id='spanel' style='margin-left:18px'>
 <div><label><input type='checkbox' id='so'> <span id='sol'>Stabilization off (fixed mount)</span></label></div>
@@ -188,6 +190,7 @@ function render(){
  $('tt').checked=st.torchOn;
  $('tt').disabled=!st.canWrite||!st.torchSupported||(!st.streaming&&!st.torchOn);
  $('tinfo').textContent=!st.torchSupported?'This camera has no flashlight control.':!st.streaming&&!st.torchOn?'Start the stream to use the flashlight.':st.torchOn?'On - switches off in '+st.torchLeftSec+' s.':'';
+ $('pv').checked=!!st.preview;$('kp').checked=!!st.keepPreview;$('pv').disabled=!st.canWrite;$('kp').disabled=!st.canWrite||st.protect;
  $('sall').checked=st.saveAll;$('spanel').style.display=st.saveAll?'none':'block';
  $('so').checked=st.saveOis;$('sf').checked=st.saveFocus;
  $('so').disabled=!st.canWrite||!st.oisSupported;
@@ -252,6 +255,8 @@ $('addrclose').onclick=function(){$('addrbox').className='modal'};
 $('addrbox').onclick=function(e){if(e.target===this)this.className='modal'};
 $('fo').onclick=function(){$('msg').textContent='Focusing...';send('focus=once')};
 $('ps').onclick=function(){send('powersave='+(st&&st.blackout?'off':'on'))};
+$('pv').onchange=function(){send('preview='+(this.checked?'on':'off'))};
+$('kp').onchange=function(){send('keeppreview='+(this.checked?'on':'off'))};
 $('ss').onclick=function(){send('stream='+(st&&st.streaming?'stop':'start'))};
 $('eng').onclick=function(){send('engine=normal')};
 function video(k,v){send(k+'='+v);$('msg').textContent='Applying - the stream restarts for a moment...'}

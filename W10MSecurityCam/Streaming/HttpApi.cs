@@ -151,7 +151,7 @@ namespace W10MSecurityCam.Streaming
                 if (refused != null) return Reply(403, "Forbidden", "text/plain", refused);
                 var all = ParseForm(r.Body); // changes only in the body, never in the URL
                 var only = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                foreach (var k in new[] { "camera", "focus", "exposure", "wb", "format", "bitrate", "highbw", "powersave", "stream", "engine", "user", "password", "savepower", "saveois", "savefocus", "probe", "torch", "log", "stats" })
+                foreach (var k in new[] { "camera", "focus", "exposure", "wb", "format", "bitrate", "highbw", "powersave", "stream", "engine", "user", "password", "savepower", "saveois", "savefocus", "probe", "torch", "log", "stats", "preview", "keeppreview" })
                     if (all.TryGetValue(k, out var v)) only[k] = v;
                 string bad = CheckLoginFields(only) ?? CheckCurrentPassword(only, all);
                 if (bad != null) result = bad;

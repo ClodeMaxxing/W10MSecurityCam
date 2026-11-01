@@ -83,6 +83,7 @@
     <Compile Include="MainPage.xaml.cs">
       <DependentUpon>MainPage.xaml</DependentUpon>
     </Compile>
+    <Compile Include="MainPage.Display.cs" />
     <Compile Include="MainPage.Power.cs" />
     <Compile Include="MainPage.Servers.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

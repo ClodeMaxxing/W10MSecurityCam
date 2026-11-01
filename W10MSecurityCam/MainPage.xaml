@@ -78,8 +78,11 @@
         </Grid.ColumnDefinitions>
 
         <CaptureElement x:Name="PreviewElement" Stretch="Uniform" />
-        <TextBlock x:Name="PreviewOffText" Text="Preview off" Foreground="#888"
-                   HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" />
+        <!-- The dark preview area: a tap shows the picture for 60 s, like Show camera picture (MainPage.Display.cs). -->
+        <Grid x:Name="PreviewTapArea" Background="Transparent" Tapped="PreviewArea_Tapped">
+            <TextBlock x:Name="PreviewOffText" Text="Preview off" Foreground="#6F8F77" TextWrapping="Wrap" TextAlignment="Center"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" Margin="12" />
+        </Grid>
 
         <ScrollViewer Grid.Column="1" Background="#050805" VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="10,6,10,10">
@@ -248,12 +251,14 @@
 
                 <Button Style="{StaticResource FoldButton}" Tag="CameraPanel|CAMERA" Content="CAMERA  &#x25B8;" Click="Fold_Click" />
                 <StackPanel x:Name="CameraPanel" Visibility="Collapsed">
+                    <ToggleSwitch x:Name="PreviewToggle" Header="Preview on the phone" Toggled="PreviewToggle_Toggled" />
+                    <TextBlock Text="Off by default. On: the picture while stopped, and while streaming unless the screen is blacked out. Adjusting the camera here shows the picture for 60 s anyway (while streaming, one stream restart each way)." Foreground="#7F9A86" FontSize="12" TextWrapping="Wrap" Margin="0,-4,0,6" />
                     <ToggleSwitch x:Name="AutoCameraCheck" Header="Automatic focus, exposure and white balance" IsOn="True" Toggled="AutoCameraCheck_Changed" />
                     <Button x:Name="FocusOnceButton" Content="Focus once and lock" Click="FocusOnceButton_Click" HorizontalAlignment="Stretch" Margin="0,2,0,4" />
                     <TextBlock x:Name="TuningStateText" Text="" FontSize="11" Foreground="#B9CFBD" TextWrapping="Wrap" Margin="0,0,0,4" />
                     <!-- Shown while at least one setting is manual. Each row: label + its own Auto box, then the slider
                          (greyed out while that setting is automatic). All three on Auto hides this panel again. -->
-                    <StackPanel x:Name="ManualCameraPanel" Visibility="Collapsed">
+                    <StackPanel x:Name="ManualCameraPanel">
                         <!-- Each setting: its value as a label, Auto / Manual, then the slider (greyed out on Auto). As in W10MDashcam / W10MWebCam. -->
                         <TextBlock x:Name="FocusLabel" Text="Focus" FontSize="12" Margin="0,4,0,0" />
                         <ToggleSwitch x:Name="FocusAutoCheck" OnContent="Auto" OffContent="Manual" Toggled="SubAuto_Changed" Margin="0,-6,0,-6" />
@@ -274,6 +279,8 @@
                 <StackPanel x:Name="PowerPanel" Visibility="Collapsed">
                     <TextBlock x:Name="PowerAlert" Text="Heat protection: power saving forced on" Foreground="#FF5555" FontWeight="Bold" FontSize="12" TextWrapping="Wrap" Visibility="Collapsed" Margin="0,2,0,2" />
                     <ToggleSwitch x:Name="PowerSaveToggle" Header="Black screen while streaming" IsOn="True" Toggled="PowerSaveToggle_Toggled" />
+                    <ToggleSwitch x:Name="KeepPreviewToggle" Header="Keep the preview running behind the black screen" Toggled="KeepPreviewToggle_Toggled" />
+                    <TextBlock Text="Off by default: the preview costs CPU and heat (about twice the app's CPU). On: a tap on the black screen shows the picture at once, with no stream restart. Heat protection switches it off until charging resumes." Foreground="#7F9A86" FontSize="12" TextWrapping="Wrap" Margin="0,-4,0,6" />
                     <TextBlock Text="Tap the black screen to read the status for 15 s. Show camera picture lights it for 60 s (the stream restarts briefly to start and stop the picture). The start/stop chirp follows the phone's Ringer + notifications volume." Foreground="#7F9A86" FontSize="12" TextWrapping="Wrap" Margin="0,-4,0,6" />
                     <ToggleSwitch x:Name="SaveAllCheck" Header="Power-saving camera features" IsOn="True" Toggled="SaveAll_Changed" />
                     <TextBlock Text="Less processing and heat: stabilization off for a fixed mount, and focus held once it has settled. Switch it off to choose each one." Foreground="#7F9A86" FontSize="12" TextWrapping="Wrap" Margin="0,-4,0,2" />

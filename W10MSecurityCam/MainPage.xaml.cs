@@ -54,14 +54,11 @@ namespace W10MSecurityCam
         private DateTime _lastPowerWarning = DateTime.MinValue;
         private readonly DisplayRequest _displayRequest = new DisplayRequest();
         private readonly DispatcherTimer _statsTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-        private readonly DispatcherTimer _wakeTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(15) };
         private readonly ApplicationDataContainer _settings = ApplicationData.Current.LocalSettings;
 
         private bool _busy;
         private DateTime _busySince;
         private bool _keepAwake;
-        private BrightnessOverride _brightness;
-        private bool _blackedOut;
 
         // crash guard + stall watchdog
         private DateTime _startedAt = DateTime.MinValue;
@@ -159,7 +156,6 @@ namespace W10MSecurityCam
             LoadServerSettings();
             _healthTimer.Tick += (s, e) => { CheckPower(); CheckMemory(); };
             _statsTimer.Tick += (s, e) => UpdateStats();
-            _wakeTimer.Tick += WakeTimer_Tick;
             // Any touch on the page (handled or not) keeps a woken screen awake and a shown picture showing.
             AddHandler(PointerPressedEvent, new Windows.UI.Xaml.Input.PointerEventHandler(AnyTouch), true);
             Window.Current.VisibilityChanged += (s, e) => { if (!e.Visible) Log("App hidden (screen locked or switched away)"); };
@@ -243,7 +239,7 @@ namespace W10MSecurityCam
                 if (_settings.Values["Keyframe"] is int kf && kf >= 0 && kf < KeyframeBox.Items.Count)
                     KeyframeBox.SelectedIndex = kf;
                 AutoStartToggle.IsOn = !(_settings.Values["AutoStart"] is bool b0) || b0;
-                PowerSaveToggle.IsOn = !(_settings.Values["PowerSave"] is bool b1) || b1;
+                LoadDisplaySettings();
 
                 bool crashedLastTime = _settings.Values["StartInProgress"] is bool sip && sip;
                 bool autoStarting = AutoStartToggle.IsOn && !crashedLastTime;
@@ -269,7 +265,7 @@ namespace W10MSecurityCam
                 PreviewElement.Source = _camera.Capture;
                 // Don't spin the preview up just to switch it off again: starting 4K recording while the
                 // preview is toggled right after camera power-up crashes the camera pipeline.
-                if (PreviewWanted && !(autoStarting && PowerSaveToggle.IsOn)) await _camera.SetPreviewAsync(true);
+                if (PreviewWanted && !autoStarting) await _camera.SetPreviewAsync(true);
 
                 _tuning.Describe(_camera.Capture);
                 LoadSaveUi();
@@ -419,7 +415,7 @@ namespace W10MSecurityCam
                     await Task.Delay(2500); // let the first frames flow before touching the camera controls again
                     await ApplyTuningAsync(true);
                     StartButton.Content = "Stop RTSP stream";
-                    await ApplyBlackoutAsync();
+                    await ApplyDisplayAsync();
                     if (!_keepAwake) { _displayRequest.RequestActive(); _keepAwake = true; }
                 }
                 else
@@ -427,7 +423,7 @@ namespace W10MSecurityCam
                     await _camera.StopStreamingAsync();
                     ClearStartFlag();
                     StopUi();
-                    await ApplyBlackoutAsync();
+                    await ApplyDisplayAsync();
                 }
             }
             catch (Exception ex)
@@ -456,74 +452,12 @@ namespace W10MSecurityCam
             if (_keepAwake) { _displayRequest.RequestRelease(); _keepAwake = false; }
         }
 
-        // ------------------------------------------------------------------ blackout (battery saver)
+        // ------------------------------------------------------------------ display (black screen, preview): MainPage.Display.cs
 
-        /// <summary>While streaming: preview off, screen at minimum brightness, full black overlay (tap to wake for 15 s).</summary>
-        /// <summary>
-        /// While any camera setting is manual the person is adjusting it and needs to see the picture, so the
-        /// blackout is paused and the preview forced on (their saved toggles are left alone and come back
-        /// when everything is automatic again).
-        /// </summary>
-        // The three display rules live here and nowhere else:
-        //  - Adjusting: someone is touching the camera controls (or Wake) ON THE PHONE; it lapses after 60 s without a touch.
-        //    Settings changed from the web page never count, so the web can adjust while the phone stays black.
-        //  - Blackout: streaming, the power-save switch is on, and nobody is adjusting on the phone.
-        //  - Preview: the user's switch, or forced on while adjusting.
-        private bool Adjusting => _phoneAdjusting;
-        private bool BlackoutWanted => _camera != null && _camera.IsStreaming && PowerSaveToggle.IsOn && !Adjusting;
         private static string AppVersion { get { var v = Package.Current.Id.Version; return v.Major + "." + v.Minor + "." + v.Build; } }
-        private bool PreviewWanted => !PowerSaveToggle.IsOn || Adjusting; // one switch: stealth (black, no preview) or picture shown
 
-        /// <summary>One-click power save (phone button and web button): brightness 0, black screen, preview off.</summary>
-        private async Task SetBlackoutAsync(bool on)
-        {
-            if (on) EndPhoneAdjust();
-            if (PowerSaveToggle.IsOn != on) PowerSaveToggle.IsOn = on; // its handler saves the setting and applies it
-            else await ApplyBlackoutAsync();
-            await UpdateDisplayForTuningAsync();
-            UpdatePowerButton();
-        }
-
-        private async void PowerSaveButton_Click(object sender, RoutedEventArgs e)
-        {
-            // Wake only lifts the black screen for a while (the saved setting stays); the button never touches the preview itself.
-            // The button is only reachable while the screen is lit, so it always blacks out: from a 15 s status look
-            // (blackout already on, overlay lifted) it puts the overlay straight back; otherwise it switches blackout on.
-            if (_blackedOut) WakeTimer_Tick(null, null);
-            else await SetBlackoutAsync(true);
-            // Blacking out by hand also ends a picture that is showing: stop the preview now rather than waiting for the timer.
-            if (_camera != null && _camera.IsStreaming && _camera.Previewing && !PreviewWanted)
-                await RestartForPreviewAsync("to stop the preview (screen blacked out)", true);
-            if (!(_camera != null && _camera.IsStreaming)) Log("Power save is on; the screen goes black when streaming starts");
-        }
-
-        private void UpdatePowerButton()
-        {
-            PowerSaveButton.Content = "Black out the screen now";
-        }
-
-        private DateTime _lastPreviewRestart = DateTime.MinValue;
-
-        // ---- phone-side adjusting: lifts the blackout and shows the picture; lapses after 60 s without a touch
-        private bool _phoneAdjusting;
-        private readonly DispatcherTimer _adjustTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(60) };
-        private bool _adjustTimerHooked;
-
-        /// <param name="byHand">The Show camera picture button: always (re)starts the picture, even if a restart ran a moment ago.</param>
-        private async Task TouchPhoneAdjustAsync(bool byHand = false)
-        {
-            if (!_adjustTimerHooked) { _adjustTimer.Tick += AdjustTimer_Tick; _adjustTimerHooked = true; }
-            _adjustTimer.Stop(); _adjustTimer.Start();
-            if (_protect) return;
-            if (_phoneAdjusting && !byHand) return;
-            if (!_phoneAdjusting) Log(byHand ? "Show camera picture pressed" : "Camera controls touched on the phone: showing the picture");
-            _phoneAdjusting = true;
-            await UpdateDisplayForTuningAsync(byHand);
-        }
-
-        private void TouchPhoneAdjust() { var _ = TouchPhoneAdjustAsync(); }
-
-        private async void ShowPictureButton_Click(object sender, RoutedEventArgs e) => await TouchPhoneAdjustAsync(true);
+        /// <summary>A banner that must stay visible: none in this app (the dashcam has its recording and power-loss banners).</summary>
+        private bool PanelOnScreen => false;
 
         /// <summary>Folding section headers: Tag is "PanelName|LABEL".</summary>
         private void Fold_Click(object sender, RoutedEventArgs e)
@@ -533,145 +467,16 @@ namespace W10MSecurityCam
             if (!(FindName(parts[0]) is UIElement panel)) return;
             bool open = panel.Visibility != Visibility.Visible;
             panel.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
-            b.Content = parts[1] + (open ? "  \u25BE" : "  \u25B8");
+            b.Content = parts[1] + (open ? "  ▾" : "  ▸");
         }
 
-        private void EndPhoneAdjust() { _phoneAdjusting = false; _adjustTimer.Stop(); }
-
-        private async void AdjustTimer_Tick(object sender, object e)
-        {
-            _adjustTimer.Stop();
-            if (!_phoneAdjusting) return;
-            _phoneAdjusting = false;
-            Log("No touches for 60 s: back to blackout");
-            await UpdateDisplayForTuningAsync();
-            // the preview cannot be stopped mid-stream; one restart does it
-            if (_camera != null && _camera.Previewing && !PreviewWanted) await RestartForPreviewAsync("to stop the preview");
-            UpdatePreviewText();
-        }
-
-        /// <summary>
-        /// Brings the camera preview in line with what is wanted. While streaming the preview cannot change (that stalls the
-        /// 4K pipeline), so a preview that is wanted but not running needs one stream restart; that happens only when
-        /// asked for, and at most once a minute.
-        /// </summary>
-        private async Task EnsurePreviewAsync(bool restartIfNeeded, bool byHand = false)
-        {
-            if (_camera == null) return;
-            bool want = PreviewWanted && !_blackedOut;
-            if (!_camera.IsStreaming) { await _camera.SetPreviewAsync(want); return; }
-            if (want && !_camera.Previewing && restartIfNeeded) await RestartForPreviewAsync("to show the camera picture on the phone", byHand);
-        }
-
-        /// <summary>The preview can only change while the stream is stopped, so this is the one place that restarts the stream for it (at most once a minute).</summary>
-        private bool _previewFixPending; // a button asked for a restart while another one was running: do it as soon as possible
-
-        private async Task RestartForPreviewAsync(string why, bool byHand = false)
-        {
-            if (_camera == null || !_camera.IsStreaming) return;
-            if (_busy || _protectBusy) { if (byHand) _previewFixPending = true; return; }
-            _previewFixPending = false;
-            if (!byHand && (DateTime.Now - _lastPreviewRestart).TotalSeconds < 60) return; // automatic restarts: at most once a minute
-            _lastPreviewRestart = DateTime.Now;
-            Log("Restarting the stream once " + why);
-            await ToggleStreamingAsync();
-            await ToggleStreamingAsync();
-        }
-
-        private void UpdatePreviewText()
-        {
-            bool running = _camera != null && _camera.Previewing;
-            PreviewOffText.Text = _camera != null && _camera.IsStreaming && PreviewWanted && !running
-                ? "Starting the picture (the stream restarts for a moment)..." : "Preview off";
-            PreviewOffText.Visibility = running ? Visibility.Collapsed : Visibility.Visible;
-        }
-
-        private async Task UpdateDisplayForTuningAsync(bool byHand = false)
-        {
-            try
-            {
-                bool adjusting = Adjusting;
-                PowerSaveToggle.IsEnabled = !_protect;
-                await ApplyBlackoutAsync();
-                if (!_blackedOut && _camera != null)
-                {
-                    await EnsurePreviewAsync(adjusting, byHand); // someone adjusting the camera needs to see the picture
-                    UpdatePreviewText();
-                }
-            }
-            catch (Exception ex) { Log("Display update: " + ex.Message); }
-        }
-
-        private async Task ApplyBlackoutAsync()
-        {
-            bool want = BlackoutWanted;
-            if (want == _blackedOut) { UpdatePowerButton(); return; }
-            _blackedOut = want;
-            try
-            {
-                if (_brightness == null) _brightness = BrightnessOverride.GetForCurrentView();
-                if (want)
-                {
-                    if (_brightness.IsSupported)
-                    {
-                        _brightness.SetBrightnessLevel(0.0, DisplayBrightnessOverrideOptions.None);
-                        _brightness.StartOverride();
-                    }
-                    if (_camera != null && !_camera.IsStreaming) await _camera.SetPreviewAsync(false); // never mid-stream
-                    BlackoutOverlay.Visibility = Visibility.Visible;
-                }
-                else
-                {
-                    _wakeTimer.Stop();
-                    BlackoutOverlay.Visibility = Visibility.Collapsed;
-                    if (_brightness.IsSupported) _brightness.StopOverride();
-                    if (_camera != null && !_camera.IsStreaming && PreviewWanted) await _camera.SetPreviewAsync(true);
-                    UpdatePreviewText();
-                }
-            }
-            catch (Exception ex) { Log("Blackout: " + ex.Message); }
-            UpdatePowerButton();
-        }
-
-        private void BlackoutOverlay_Tapped(object sender, Windows.UI.Xaml.Input.TappedRoutedEventArgs e)
-        {
-            BlackoutOverlay.Visibility = Visibility.Collapsed;
-            if (_brightness != null && _brightness.IsSupported) _brightness.StopOverride();
-            PreviewOffText.Text = "Streaming - preview off (blackout mode)";
-            PreviewOffText.Visibility = Visibility.Visible;
-            _wakeTimer.Stop();
-            _wakeTimer.Start();
-        }
-
-        private void AnyTouch(object sender, Windows.UI.Xaml.Input.PointerRoutedEventArgs e)
-        {
-            if (_blackedOut && BlackoutOverlay.Visibility != Visibility.Visible) { _wakeTimer.Stop(); _wakeTimer.Start(); }
-            if (_phoneAdjusting) { _adjustTimer.Stop(); _adjustTimer.Start(); }
-        }
-
-        private void WakeTimer_Tick(object sender, object e)
-        {
-            _wakeTimer.Stop();
-            if (!_blackedOut) return;
-            BlackoutOverlay.Visibility = Visibility.Visible;
-            if (_brightness != null && _brightness.IsSupported)
-            {
-                _brightness.SetBrightnessLevel(0.0, DisplayBrightnessOverrideOptions.None);
-                _brightness.StartOverride();
-            }
-        }
-
-        private async void PowerSaveToggle_Toggled(object sender, RoutedEventArgs e)
-        {
-            if (!_protect) _settings.Values["PowerSave"] = PowerSaveToggle.IsOn; // forced values are temporary
-            await ApplyBlackoutAsync();
-        }
+        /// <summary>Any touch on the page (handled or not) keeps a woken screen awake and a shown picture showing.</summary>
+        private void AnyTouch(object sender, Windows.UI.Xaml.Input.PointerRoutedEventArgs e) => TouchKeepsDisplay();
 
         private void AutoStartToggle_Toggled(object sender, RoutedEventArgs e)
         {
             _settings.Values["AutoStart"] = AutoStartToggle.IsOn;
         }
-
 
         // ------------------------------------------------------------------ stats + watchdog
 
@@ -685,17 +490,7 @@ namespace W10MSecurityCam
             UpdatePowerFlags();
             SampleStats();
             if ((DateTime.Now - _appStarted).TotalSeconds > 20) MarkLaunchHealthy();
-            // a preview left running behind the black screen (its stop restart was skipped while busy) is stopped on a later tick
-            if (!_blackedOut) UpdatePreviewText();
-            // The preview does not match what is wanted (a restart was skipped while another one ran): fix it with one restart.
-            // A pending button press skips the once-a-minute limit.
-            if (_camera != null && _camera.IsStreaming && !_busy && !_protectBusy)
-            {
-                if (_camera.Previewing && !PreviewWanted && _blackedOut)
-                { var _ = RestartForPreviewAsync("to stop the preview", _previewFixPending); }
-                else if (!_camera.Previewing && PreviewWanted && !_blackedOut && _phoneAdjusting)
-                { var _ = RestartForPreviewAsync("to show the camera picture on the phone", _previewFixPending); }
-            }
+            DisplayTick(); // a preview that disagrees with the black screen is fixed with one restart (MainPage.Display.cs)
             // keep the flashlight switch in step with the stream: it is only usable while streaming
             bool torchUsable = _tuning.TorchSupported && _camera != null && _camera.IsStreaming && !_protect;
             if (TorchToggle.IsEnabled != (torchUsable || _torchWanted)) LoadTorchUi();
@@ -1183,7 +978,6 @@ namespace W10MSecurityCam
             try
             {
                 AutoCameraCheck.IsOn = _tuning.Auto;
-                ManualCameraPanel.Visibility = _tuning.Auto ? Visibility.Collapsed : Visibility.Visible;
                 FocusAutoCheck.IsOn = _tuning.FocusAuto;
                 ExposureAutoCheck.IsOn = _tuning.ExposureAuto;
                 WbAutoCheck.IsOn = _tuning.WbAuto;
@@ -1252,7 +1046,7 @@ namespace W10MSecurityCam
                 _settings.Values["TuningInProgress"] = false;
                 SaveTuning();
                 LoadTuningUi();
-                await UpdateDisplayForTuningAsync();
+                await ApplyDisplayAsync();
                 await ApplyTuningAsync();
             }
             finally { FocusOnceButton.IsEnabled = true; }
@@ -1263,7 +1057,7 @@ namespace W10MSecurityCam
             TouchPhoneAdjust();
             LoadTuningUi();
             SaveTuning();
-            var _ = UpdateDisplayForTuningAsync();
+            var _ = ApplyDisplayAsync();
             _tuningTimer.Stop(); _tuningTimer.Start();
         }
 
@@ -1379,7 +1173,7 @@ namespace W10MSecurityCam
         // flashlight; put the person's own settings back once charging resumes. The forced values are never written to the
         // saved settings, so an app restart in between also comes back with the person's own choices.
         private bool _protect, _protectBusy, _protectRestartOwed;
-        private bool _pOis, _pFocus, _pBlackoutSetting;
+        private bool _pOis, _pFocus;
         private string _pFormatKey = "", _pBitrateKey = "";
         private DateTime _protectSince = DateTime.MinValue;
         private const string CoolBitrate = "6"; // Mbps while cooling down
@@ -1391,7 +1185,6 @@ namespace W10MSecurityCam
             try
             {
                 _pOis = _tuning.SaveOis; _pFocus = _tuning.SaveFocus;
-                _pBlackoutSetting = PowerSaveToggle.IsOn;
                 _pFormatKey = _currentFormatKey; _pBitrateKey = _currentBitrateKey;
                 _protectSince = DateTime.Now;
                 _protect = true;
@@ -1401,7 +1194,7 @@ namespace W10MSecurityCam
                 var buzz = BuzzAsync(2);
                 if (_torchWanted) SetTorch(false);
                 _tuning.SaveOis = true; _tuning.SaveFocus = true;
-                await SetBlackoutAsync(true);
+                ForceDisplayForProtection(); // black screen on, no preview behind it (MainPage.Display.cs)
                 // 4K was measured to keep the phone hot (GPU near 90 %) while 1080p at 6 Mbps let charging resume within a minute.
                 string cooled = ApplyVideoSettings(CoolFormatKey(), CoolBitrateKey());
                 LoadSaveUi(); LoadTorchUi(); UpdateProtectUi();
@@ -1428,8 +1221,8 @@ namespace W10MSecurityCam
                 string back = ApplyVideoSettings(_pFormatKey, _pBitrateKey);
                 if (back.Length > 0) Log("Heat protection: video restored (" + back + ")");
                 EndPhoneAdjust();
-                PowerSaveToggle.IsOn = _pBlackoutSetting; // its handler saves the setting
-                await UpdateDisplayForTuningAsync();
+                RestoreDisplayAfterProtection();
+                await ApplyDisplayAsync();
                 LoadSaveUi(); LoadTorchUi(); UpdateProtectUi();
                 await RestartStreamForProtectionAsync();
                 _saveTimer.Stop(); _saveTimer.Start();
@@ -1479,7 +1272,7 @@ namespace W10MSecurityCam
             SaveFocusCheck.IsEnabled = free;
             ResolutionBox.IsEnabled = BitrateBox.IsEnabled = HighBwToggle.IsEnabled = free;
             VideoAlert.Visibility = _protect ? Visibility.Visible : Visibility.Collapsed;
-            PowerSaveButton.IsEnabled = free;
+            PowerSaveButton.IsEnabled = free; KeepPreviewToggle.IsEnabled = free;
             PowerSaveToggle.IsEnabled = free;
         }
 
@@ -1617,6 +1410,9 @@ namespace W10MSecurityCam
             o["saveFocus"] = JsonValue.CreateBooleanValue(_tuning.SaveFocus);
             o["oisSupported"] = JsonValue.CreateBooleanValue(_tuning.OisSupported);
             o["protect"] = JsonValue.CreateBooleanValue(_protect);
+            o["preview"] = JsonValue.CreateBooleanValue(PreviewToggle.IsOn);
+            o["keepPreview"] = JsonValue.CreateBooleanValue(KeepPreviewToggle.IsOn);
+            o["powerSave"] = JsonValue.CreateBooleanValue(PowerSaveToggle.IsOn);
             o["torchSupported"] = JsonValue.CreateBooleanValue(_tuning.TorchSupported);
             o["torchOn"] = JsonValue.CreateBooleanValue(_torchWanted);
             o["torchLeftSec"] = JsonValue.CreateNumberValue(_torchWanted ? Math.Max(0, Math.Ceiling((_torchOffAt - DateTime.Now).TotalSeconds)) : 0);
@@ -1714,7 +1510,7 @@ namespace W10MSecurityCam
             if (_protect)
             {
                 bool had = false;
-                foreach (var k in new[] { "powersave", "savepower", "saveois", "savefocus", "torch", "format", "bitrate", "highbw" }) had |= form.Remove(k);
+                foreach (var k in new[] { "powersave", "keeppreview", "savepower", "saveois", "savefocus", "torch", "format", "bitrate", "highbw" }) had |= form.Remove(k);
                 if (had) done.Add("heat protection is on: power-saving options, video format/bitrate and the flashlight cannot be changed until charging resumes");
             }
             if (form.TryGetValue("password", out var newPassword) && newPassword.Length > 0 && newPassword.Length < DigestAuth.MinPasswordLength)
@@ -1759,7 +1555,7 @@ namespace W10MSecurityCam
             "snapshot=" + (_snapshotsOn ? "on" : "off") +
             (_camera != null ? (_camera.PhotoWhileRecordingSupported ? "" : " (this camera can't take photos while recording)") : "") + "\n";
 
-        private string ExtraConfigHelp() => ", stream=start|stop|restart, engine=normal, probe=devices|power, powersave=on|off, savepower=on|off, saveois|savefocus=on|off, torch=on|off, focus=once, highbw=on|off, camera=auto|manual, focus=auto|manual|0-100, exposure=auto|manual|MS, wb=auto|manual|KELVIN, format=WIDTHxHEIGHT@FPS, bitrate=MBPS|auto, audio=on|off, udp=on|off, snapshot=on|off, log=on|off, stats=on|off";
+        private string ExtraConfigHelp() => ", stream=start|stop|restart, engine=normal, probe=devices|power, powersave=on|off, preview=on|off, keeppreview=on|off, savepower=on|off, saveois|savefocus=on|off, torch=on|off, focus=once, highbw=on|off, camera=auto|manual, focus=auto|manual|0-100, exposure=auto|manual|MS, wb=auto|manual|KELVIN, format=WIDTHxHEIGHT@FPS, bitrate=MBPS|auto, audio=on|off, udp=on|off, snapshot=on|off, log=on|off, stats=on|off";
 
         private static string FormatKey(FormatOption f) => f.Width + "x" + f.Height + "@" + Math.Round(f.Fps);
 
@@ -1978,9 +1774,21 @@ namespace W10MSecurityCam
                 bool on = IsOn(psv);
                 await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, async () =>
                 {
-                    await SetBlackoutAsync(on);
+                    await SetBlackScreenAsync(on);
                 });
                 done.Add("phone screen blackout " + (on ? "on" : "off") + (on && !(_camera != null && _camera.IsStreaming) ? " (starts with the stream)" : ""));
+            }
+            if (form.TryGetValue("preview", out var pv))
+            {
+                bool on = IsOn(pv);
+                await RunUiAsync(() => { PreviewToggle.IsOn = on; return Task.CompletedTask; }); // its handler saves and applies
+                done.Add("preview on the phone " + (on ? "on" : "off"));
+            }
+            if (form.TryGetValue("keeppreview", out var kpv))
+            {
+                bool on = IsOn(kpv);
+                await RunUiAsync(() => { KeepPreviewToggle.IsOn = on; return Task.CompletedTask; });
+                done.Add("preview behind the black screen " + (on ? "on" : "off"));
             }
             if (form.TryGetValue("camera", out var cm))
             {
@@ -2015,7 +1823,7 @@ namespace W10MSecurityCam
             if (tuningChanged)
             {
                 SaveTuning();
-                await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, async () => { LoadTuningUi(); await UpdateDisplayForTuningAsync(); await ApplyTuningAsync(); });
+                await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, async () => { LoadTuningUi(); await ApplyDisplayAsync(); await ApplyTuningAsync(); });
                 done.Add(string.Format(inv, "camera {0} (focus {1}, exposure {2}, wb {3})", _tuning.Mode,
                     _tuning.FocusAuto ? "auto" : Math.Round(_tuning.FocusPercent).ToString(inv),
                     _tuning.ExposureAuto ? "auto" : _tuning.ExposureMs.ToString("0.## ms", inv),
