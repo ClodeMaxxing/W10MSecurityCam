@@ -24,8 +24,9 @@
             <Setter Property="Foreground" Value="#D6E8D9" />
             <Setter Property="TextTrimming" Value="CharacterEllipsis" />
         </Style>
+        <!-- The recording light: a slow fade while streaming (as the W10MDashcam REC light). -->
         <Storyboard x:Name="DotPulse" RepeatBehavior="Forever" AutoReverse="True">
-            <DoubleAnimation Storyboard.TargetName="StatusDot" Storyboard.TargetProperty="Opacity" From="1" To="0.3" Duration="0:0:1" />
+            <DoubleAnimation Storyboard.TargetName="StatusDot" Storyboard.TargetProperty="Opacity" From="1" To="0.25" Duration="0:0:1.2" />
         </Storyboard>
         <Style x:Key="FoldButton" TargetType="Button">
             <Setter Property="Background" Value="#0B1A10" />
@@ -56,15 +57,17 @@
             <Setter Property="Margin" Value="0,0,0,3" />
             <Setter Property="HorizontalAlignment" Value="Stretch" />
         </Style>
-        <!-- A full-width button with a thin light bar along its bottom edge: green while the thing is on, dark while off
-             (Preview, Screensaver; the same in W10MDashcam / W10MWebCam). The code sets the bar and the state text. -->
+        <!-- A full-width button with a short light on its left edge: green while the thing is on, dark while off
+             (the stream, Preview, Screensaver, Flashlight; the same in W10MDashcam / W10MWebCam). The code sets the light and
+             the state text. The content grid's first column is the BarLight border. -->
         <Style x:Key="BarButton" TargetType="Button">
             <Setter Property="HorizontalAlignment" Value="Stretch" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="VerticalContentAlignment" Value="Stretch" />
             <Setter Property="Background" Value="#0A160D" />
             <Setter Property="BorderBrush" Value="#1F3A26" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Padding" Value="10,6,10,5" />
+            <Setter Property="Padding" Value="0,7,10,7" />
             <Setter Property="Margin" Value="0,0,0,4" />
         </Style>
         <Style x:Key="BarName" TargetType="TextBlock">
@@ -80,10 +83,11 @@
             <Setter Property="Margin" Value="8,0,0,0" />
         </Style>
         <Style x:Key="BarLight" TargetType="Border">
-            <Setter Property="Height" Value="3" />
-            <Setter Property="CornerRadius" Value="2" />
+            <Setter Property="Width" Value="4" />
+            <Setter Property="CornerRadius" Value="0,2,2,0" />
             <Setter Property="Background" Value="#16301E" />
-            <Setter Property="Margin" Value="0,5,0,0" />
+            <Setter Property="Margin" Value="0,1,10,1" />
+            <Setter Property="VerticalAlignment" Value="Stretch" />
         </Style>
         <!-- A group of service rows (RTSP, WEB UI) with a small label on top. -->
         <Style x:Key="ServiceGroup" TargetType="Border">
@@ -161,86 +165,28 @@
                 </Grid>
 
                 <!-- MAIN: what is needed day to day. Everything else folds away below. -->
-                <!-- The stream button: a light-bar button like Preview and Screensaver, with a small recording light that is red
-                     while streaming (UpdateStreamButton). -->
-                <Button x:Name="StartButton" Style="{StaticResource BarButton}" Margin="0,0,0,6" Click="StartButton_Click" IsEnabled="False">
-                    <Grid>
-                        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                        <Ellipse x:Name="StreamLight" Width="9" Height="9" Margin="0,0,8,0" VerticalAlignment="Center" Fill="#3A1414" Stroke="#5A2020" StrokeThickness="1" />
-                        <TextBlock Grid.Column="1" Text="RTSP stream" Style="{StaticResource BarName}" />
-                        <TextBlock x:Name="StreamStateText" Grid.Column="2" Text="OFF" Style="{StaticResource BarState}" />
-                        <Border x:Name="StreamBar" Grid.Row="1" Grid.ColumnSpan="3" Style="{StaticResource BarLight}" />
-                    </Grid>
-                </Button>
-                <!-- Service strip: the four ways in, grouped RTSP / WEB UI, each row Wi-Fi or USB with its full address. Green dot =
-                     reachable, grey = not; the note on the right says why (viewers, stopped, no USB). Tap opens Network and login.
-                     USB: the phone cannot see the cable as a link (IP over USB arrives as loopback), so USB is certain only once a
-                     PC has connected; see UpdateServicePills. -->
-                <StackPanel x:Name="ServiceStrip" Margin="0,0,0,6">
-                    <Border Style="{StaticResource ServiceGroup}">
-                        <StackPanel>
-                            <TextBlock Text="RTSP" Style="{StaticResource ServiceGroupLabel}" />
-                            <Border x:Name="SvcWifi" Style="{StaticResource ServicePill}" Tapped="ServicePill_Tapped">
-                                <Grid>
-                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                    <Ellipse x:Name="SvcWifiDot" Style="{StaticResource PillDot}" />
-                                    <TextBlock Grid.Column="1" Text="Wi-Fi" Style="{StaticResource PillLabel}" />
-                                    <TextBlock x:Name="SvcWifiText" Grid.Column="2" Style="{StaticResource PillText}" Text="" TextTrimming="CharacterEllipsis" />
-                                    <TextBlock x:Name="SvcWifiNote" Grid.Column="3" Style="{StaticResource PillText}" Foreground="#7F9A86" Margin="6,0,0,0" Text="" />
-                                </Grid>
-                            </Border>
-                            <Border x:Name="SvcUsb" Style="{StaticResource ServicePill}" Tapped="ServicePill_Tapped">
-                                <Grid>
-                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                    <Ellipse x:Name="SvcUsbDot" Style="{StaticResource PillDot}" />
-                                    <TextBlock Grid.Column="1" Text="USB" Style="{StaticResource PillLabel}" />
-                                    <TextBlock x:Name="SvcUsbText" Grid.Column="2" Style="{StaticResource PillText}" Text="" TextTrimming="CharacterEllipsis" />
-                                    <TextBlock x:Name="SvcUsbNote" Grid.Column="3" Style="{StaticResource PillText}" Foreground="#7F9A86" Margin="6,0,0,0" Text="" />
-                                </Grid>
-                            </Border>
-                        </StackPanel>
-                    </Border>
-                    <Border Style="{StaticResource ServiceGroup}">
-                        <StackPanel>
-                            <TextBlock Text="WEB UI" Style="{StaticResource ServiceGroupLabel}" />
-                            <Border x:Name="SvcWeb" Style="{StaticResource ServicePill}" Tapped="ServicePill_Tapped">
-                                <Grid>
-                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                    <Ellipse x:Name="SvcWebDot" Style="{StaticResource PillDot}" />
-                                    <TextBlock Grid.Column="1" Text="Wi-Fi" Style="{StaticResource PillLabel}" />
-                                    <TextBlock x:Name="SvcWebText" Grid.Column="2" Style="{StaticResource PillText}" Text="" TextTrimming="CharacterEllipsis" />
-                                    <TextBlock x:Name="SvcWebNote" Grid.Column="3" Style="{StaticResource PillText}" Foreground="#7F9A86" Margin="6,0,0,0" Text="" />
-                                </Grid>
-                            </Border>
-                            <Border x:Name="SvcWebUsb" Style="{StaticResource ServicePill}" Tapped="ServicePill_Tapped">
-                                <Grid>
-                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                    <Ellipse x:Name="SvcWebUsbDot" Style="{StaticResource PillDot}" />
-                                    <TextBlock Grid.Column="1" Text="USB" Style="{StaticResource PillLabel}" />
-                                    <TextBlock x:Name="SvcWebUsbText" Grid.Column="2" Style="{StaticResource PillText}" Text="" TextTrimming="CharacterEllipsis" />
-                                    <TextBlock x:Name="SvcWebUsbNote" Grid.Column="3" Style="{StaticResource PillText}" Foreground="#7F9A86" Margin="6,0,0,0" Text="" />
-                                </Grid>
-                            </Border>
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
-                <!-- Status card: state dot and label, resolution and viewer pills, then the big numbers. -->
-                <Border Background="#07140B" BorderBrush="#1F3A26" BorderThickness="1" CornerRadius="6" Padding="10,8,10,8" Margin="0,0,0,6">
+                <!-- Status card, first: its header row (recording light, state, resolution, viewers) is the button that starts and
+                     stops the stream (StartButton; UpdateStatusCard / UpdateStreamButton), then the big numbers and the tiles. -->
+                <Border Background="#07140B" BorderBrush="#1F3A26" BorderThickness="1" CornerRadius="6" Padding="10,0,10,8" Margin="0,0,0,6">
                     <StackPanel>
-                        <Grid>
-                            <StackPanel Orientation="Horizontal">
-                                <Ellipse x:Name="StatusDot" Width="10" Height="10" Fill="#555555" VerticalAlignment="Center" Margin="0,0,7,0" />
-                                <TextBlock x:Name="StateText" Text="STOPPED" FontSize="13" FontWeight="SemiBold" Foreground="#9CF0B0" CharacterSpacing="60" VerticalAlignment="Center" />
-                                <Border x:Name="ResPill" BorderBrush="#2E7D46" BorderThickness="1" CornerRadius="9" Background="#0B1A10" Padding="6,0,6,1" Margin="7,0,0,0" VerticalAlignment="Center" Visibility="Collapsed">
-                                    <TextBlock x:Name="ResText" FontSize="11" Foreground="#9CF0B0" />
-                                </Border>
-                            </StackPanel>
-                            <Border BorderBrush="#2E7D46" BorderThickness="1" CornerRadius="9" Background="#0B1A10" Padding="6,0,6,1" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                <TextBlock x:Name="ViewersText" Text="0 viewers" FontSize="11" Foreground="#9CF0B0" />
-                            </Border>
-                        </Grid>
-                        <TextBlock x:Name="StatsText" Text="" FontFamily="Consolas" FontSize="20" Foreground="#E4F5E7" Margin="0,6,0,0" Visibility="Collapsed" />
+                        <Button x:Name="StartButton" Style="{StaticResource BarButton}" Margin="-10,0,-10,6" BorderThickness="0,0,0,1" Click="StartButton_Click" IsEnabled="False">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                <Border x:Name="StreamBar" Style="{StaticResource BarLight}" />
+                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                    <Ellipse x:Name="StatusDot" Width="11" Height="11" Fill="#3A1414" Stroke="#5A2020" StrokeThickness="1" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                    <TextBlock x:Name="StateText" Text="STOPPED" FontSize="13" FontWeight="SemiBold" Foreground="#9CF0B0" CharacterSpacing="60" VerticalAlignment="Center" />
+                                    <Border x:Name="ResPill" BorderBrush="#2E7D46" BorderThickness="1" CornerRadius="9" Background="#0B1A10" Padding="6,0,6,1" Margin="7,0,0,0" VerticalAlignment="Center" Visibility="Collapsed">
+                                        <TextBlock x:Name="ResText" FontSize="11" Foreground="#9CF0B0" />
+                                    </Border>
+                                    <Border x:Name="ViewersPill" BorderBrush="#2E7D46" BorderThickness="1" CornerRadius="9" Background="#0B1A10" Padding="6,0,6,1" Margin="7,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock x:Name="ViewersText" Text="0 viewers" FontSize="11" Foreground="#9CF0B0" />
+                                    </Border>
+                                </StackPanel>
+                                <TextBlock x:Name="StreamStateText" Grid.Column="2" Text="TAP TO START" Style="{StaticResource BarState}" />
+                            </Grid>
+                        </Button>
+                        <TextBlock x:Name="StatsText" Text="" FontFamily="Consolas" FontSize="20" Foreground="#E4F5E7" Margin="0,0,0,0" Visibility="Collapsed" />
                         <Grid Margin="-2,6,-2,0">
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                             <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
@@ -348,6 +294,58 @@
                         </Border>
                     </StackPanel>
                 </Border>
+                <!-- Service strip: the four ways in, grouped RTSP / WEB UI, each row Wi-Fi or USB with its full address. Green dot =
+                     reachable, grey = not; the note on the right says why (viewers, stopped, no USB). Tap opens Network and login.
+                     USB: the phone cannot see the cable as a link (IP over USB arrives as loopback), so USB is certain only once a
+                     PC has connected; see UpdateServicePills. -->
+                <StackPanel x:Name="ServiceStrip" Margin="0,0,0,6">
+                    <Border Style="{StaticResource ServiceGroup}">
+                        <StackPanel>
+                            <TextBlock Text="RTSP" Style="{StaticResource ServiceGroupLabel}" />
+                            <Border x:Name="SvcWifi" Style="{StaticResource ServicePill}" Tapped="ServicePill_Tapped">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <Ellipse x:Name="SvcWifiDot" Style="{StaticResource PillDot}" />
+                                    <TextBlock Grid.Column="1" Text="Wi-Fi" Style="{StaticResource PillLabel}" />
+                                    <TextBlock x:Name="SvcWifiText" Grid.Column="2" Style="{StaticResource PillText}" Text="" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock x:Name="SvcWifiNote" Grid.Column="3" Style="{StaticResource PillText}" Foreground="#7F9A86" Margin="6,0,0,0" Text="" />
+                                </Grid>
+                            </Border>
+                            <Border x:Name="SvcUsb" Style="{StaticResource ServicePill}" Tapped="ServicePill_Tapped">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <Ellipse x:Name="SvcUsbDot" Style="{StaticResource PillDot}" />
+                                    <TextBlock Grid.Column="1" Text="USB" Style="{StaticResource PillLabel}" />
+                                    <TextBlock x:Name="SvcUsbText" Grid.Column="2" Style="{StaticResource PillText}" Text="" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock x:Name="SvcUsbNote" Grid.Column="3" Style="{StaticResource PillText}" Foreground="#7F9A86" Margin="6,0,0,0" Text="" />
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource ServiceGroup}">
+                        <StackPanel>
+                            <TextBlock Text="WEB UI" Style="{StaticResource ServiceGroupLabel}" />
+                            <Border x:Name="SvcWeb" Style="{StaticResource ServicePill}" Tapped="ServicePill_Tapped">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <Ellipse x:Name="SvcWebDot" Style="{StaticResource PillDot}" />
+                                    <TextBlock Grid.Column="1" Text="Wi-Fi" Style="{StaticResource PillLabel}" />
+                                    <TextBlock x:Name="SvcWebText" Grid.Column="2" Style="{StaticResource PillText}" Text="" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock x:Name="SvcWebNote" Grid.Column="3" Style="{StaticResource PillText}" Foreground="#7F9A86" Margin="6,0,0,0" Text="" />
+                                </Grid>
+                            </Border>
+                            <Border x:Name="SvcWebUsb" Style="{StaticResource ServicePill}" Tapped="ServicePill_Tapped">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <Ellipse x:Name="SvcWebUsbDot" Style="{StaticResource PillDot}" />
+                                    <TextBlock Grid.Column="1" Text="USB" Style="{StaticResource PillLabel}" />
+                                    <TextBlock x:Name="SvcWebUsbText" Grid.Column="2" Style="{StaticResource PillText}" Text="" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock x:Name="SvcWebUsbNote" Grid.Column="3" Style="{StaticResource PillText}" Foreground="#7F9A86" Margin="6,0,0,0" Text="" />
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
                 <TextBlock x:Name="AlertText" Text="" Foreground="#FF5555" FontWeight="Bold" FontSize="12" TextWrapping="Wrap" Visibility="Collapsed" Margin="0,0,0,4" />
                 <!-- Safe mode (the MP4 engine after a crash or two stalls): the way back, as on the web page. -->
                 <Button x:Name="NormalModeButton" Content="Return to normal mode (low-latency engine)" HorizontalAlignment="Stretch" Visibility="Collapsed"
@@ -357,25 +355,35 @@
                      runs, otherwise until pressed again). The two ToggleSwitches below hold the state and are never shown. -->
                 <Button x:Name="PreviewButton" Style="{StaticResource BarButton}" Click="PreviewButton_Click">
                     <Grid>
-                        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                        <TextBlock Text="Preview" Style="{StaticResource BarName}" />
-                        <TextBlock x:Name="PreviewStateText" Grid.Column="1" Text="OFF" Style="{StaticResource BarState}" />
-                        <Border x:Name="PreviewBar" Grid.Row="1" Grid.ColumnSpan="2" Style="{StaticResource BarLight}" />
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                        <Border x:Name="PreviewBar" Style="{StaticResource BarLight}" />
+                        <TextBlock Grid.Column="1" Text="Preview" Style="{StaticResource BarName}" />
+                        <TextBlock x:Name="PreviewStateText" Grid.Column="2" Text="OFF" Style="{StaticResource BarState}" />
                     </Grid>
                 </Button>
                 <Button x:Name="ScreensaverButton" Style="{StaticResource BarButton}" Click="ScreensaverButton_Click">
                     <Grid>
-                        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                        <TextBlock Text="Screensaver" Style="{StaticResource BarName}" />
-                        <TextBlock x:Name="ScreensaverStateText" Grid.Column="1" Text="ON" Style="{StaticResource BarState}" />
-                        <Border x:Name="ScreensaverBar" Grid.Row="1" Grid.ColumnSpan="2" Style="{StaticResource BarLight}" />
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                        <Border x:Name="ScreensaverBar" Style="{StaticResource BarLight}" />
+                        <TextBlock Grid.Column="1" Text="Screensaver" Style="{StaticResource BarName}" />
+                        <TextBlock x:Name="ScreensaverStateText" Grid.Column="2" Text="ON" Style="{StaticResource BarState}" />
+                    </Grid>
+                </Button>
+                <!-- Flashlight: only while streaming, 30 s at a time (the LED heats the phone); the hidden switch below holds the state. -->
+                <Button x:Name="TorchButton" Style="{StaticResource BarButton}" Click="TorchButton_Click" IsEnabled="False">
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                        <Border x:Name="TorchBar" Style="{StaticResource BarLight}" />
+                        <TextBlock Grid.Column="1" Text="Flashlight" Style="{StaticResource BarName}" />
+                        <TextBlock x:Name="TorchStateText" Grid.Column="2" Text="OFF" Style="{StaticResource BarState}" />
                     </Grid>
                 </Button>
                 <StackPanel Visibility="Collapsed">
                     <ToggleSwitch x:Name="PreviewToggle" Toggled="PreviewToggle_Toggled" />
                     <ToggleSwitch x:Name="PowerSaveToggle" IsOn="True" Toggled="PowerSaveToggle_Toggled" />
+                    <TextBlock x:Name="TorchAlert" Text="Heat protection: flashlight locked" Visibility="Collapsed" />
+                    <ToggleSwitch x:Name="TorchToggle" Header="Flashlight" IsOn="False" Toggled="TorchToggle_Toggled" />
+                    <TextBlock x:Name="TorchNote" Text="" />
                 </StackPanel>
 
                 <Button Style="{StaticResource FoldButton}" Tag="VideoPanel|VIDEO" Content="VIDEO  &#x25B8;" Click="Fold_Click" />
@@ -411,9 +419,6 @@
                         <ToggleSwitch x:Name="WbAutoCheck" OnContent="Auto" OffContent="Manual" Toggled="SubAuto_Changed" Margin="0,-6,0,-6" />
                         <Slider x:Name="WbSlider" Minimum="2000" Maximum="8000" StepFrequency="100" Margin="0,-6,0,0" ValueChanged="TuningSlider_ValueChanged" />
                     </StackPanel>
-                    <TextBlock x:Name="TorchAlert" Text="Heat protection: flashlight locked" Foreground="#FF5555" FontWeight="Bold" FontSize="12" TextWrapping="Wrap" Visibility="Collapsed" Margin="0,2,0,2" />
-                    <ToggleSwitch x:Name="TorchToggle" Header="Flashlight" IsOn="False" Toggled="TorchToggle_Toggled" />
-                    <TextBlock x:Name="TorchNote" Text="" Foreground="#7F9A86" FontSize="12" TextWrapping="Wrap" Margin="0,-4,0,4" />
                 </StackPanel>
 
                 <Button Style="{StaticResource FoldButton}" Tag="PowerPanel|POWER" Content="POWER  &#x25B8;" Click="Fold_Click" />

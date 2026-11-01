@@ -144,12 +144,10 @@ namespace W10MSecurityCam
         /// <summary>The stream button's light, bar and state text: red while streaming, dark when stopped (once a second, and on start/stop).</summary>
         private void UpdateStreamButton(bool streaming)
         {
-            if (StreamLight == null) return;
-            StreamLight.Fill = streaming ? Brush(0xFF, 0x30, 0x30) : Brush(0x3A, 0x14, 0x14);
-            StreamLight.Stroke = streaming ? Brush(0xFF, 0x80, 0x80) : Brush(0x5A, 0x20, 0x20);
-            StreamBar.Background = streaming ? Brush(0xFF, 0x30, 0x30) : Brush(0x16, 0x30, 0x1E);
-            StreamStateText.Foreground = streaming ? Brush(0xFF, 0x60, 0x60) : Brush(0x7F, 0xAE, 0x86);
-            StreamStateText.Text = !StartButton.IsEnabled && !streaming ? "STARTING..." : streaming ? "ON" + (_resLabel != null ? " · " + _resLabel : "") + " · TAP TO STOP" : "OFF · TAP TO START";
+            if (StreamBar == null) return;
+            StreamBar.Background = streaming ? GreenFill : Brush(0x16, 0x30, 0x1E);
+            StreamStateText.Foreground = streaming ? GreenFill : Brush(0x7F, 0xAE, 0x86);
+            StreamStateText.Text = !StartButton.IsEnabled ? (streaming ? "STOPPING..." : "STARTING...") : streaming ? "TAP TO STOP" : "TAP TO START";
         }
 
         /// <summary>A tap on a pill opens the Network and login section, where the addresses and switches are.</summary>

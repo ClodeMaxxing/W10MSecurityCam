@@ -500,6 +500,7 @@ namespace W10MSecurityCam
             {
                 if (_camera == null || !_camera.IsStreaming) { _torchWanted = false; LoadTorchUi(); }
                 else if (DateTime.Now >= _torchOffAt) { SetTorch(false); Log("Flashlight switched off automatically (time limit)"); }
+                else UpdateTorchButton(); // the seconds left
             }
             if (tick % 10 == 0)
             {
@@ -565,7 +566,10 @@ namespace W10MSecurityCam
             ViewersText.Text = viewers + (viewers == 1 ? " viewer" : " viewers");
             StateText.Text = _protect ? "HEAT PROTECTION" : streaming ? "STREAMING" : "STOPPED";
             StateText.Foreground = _protect ? Brush(0xFF, 0x6B, 0x6B) : Brush(0x9C, 0xF0, 0xB0);
-            StatusDot.Fill = _protect ? Brush(0xFF, 0x55, 0x55) : streaming ? Brush(0x39, 0xFF, 0x14) : Brush(0x55, 0x55, 0x55);
+            // the recording light: red while streaming (pulsing), dark red when stopped
+            StatusDot.Fill = streaming ? Brush(0xFF, 0x30, 0x30) : Brush(0x3A, 0x14, 0x14);
+            StatusDot.Stroke = streaming ? Brush(0xFF, 0x80, 0x80) : Brush(0x5A, 0x20, 0x20);
+            ViewersPill.Visibility = streaming ? Visibility.Visible : Visibility.Collapsed;
             if (_resLabelKey != _currentFormatKey)
             {
                 _resLabelKey = _currentFormatKey; // parsed again only when the format changes
@@ -799,7 +803,25 @@ namespace W10MSecurityCam
                     : "Switches off by itself after 30 seconds.";
             }
             finally { _loadingTorchUi = false; }
+            UpdateTorchButton();
         }
+
+        /// <summary>The Flashlight light-bar button: lit with the seconds left while on; the reason it can't be used while off.</summary>
+        private void UpdateTorchButton()
+        {
+            if (TorchBar == null) return;
+            bool streaming = _camera != null && _camera.IsStreaming;
+            TorchButton.IsEnabled = TorchToggle.IsEnabled;
+            TorchBar.Background = _torchWanted ? GreenFill : Brush(0x16, 0x30, 0x1E);
+            TorchStateText.Foreground = _torchWanted ? GreenFill : Brush(0x7F, 0xAE, 0x86);
+            int left = _torchWanted ? Math.Max(0, (int)Math.Ceiling((_torchOffAt - DateTime.Now).TotalSeconds)) : 0;
+            TorchStateText.Text = _torchWanted ? "ON · " + left + " s"
+                : _protect ? "OFF · HEAT PROTECTION"
+                : _camera != null && !_tuning.TorchSupported && streaming ? "OFF · NOT ON THIS CAMERA"
+                : !streaming ? "OFF · STREAM FIRST" : "OFF";
+        }
+
+        private void TorchButton_Click(object sender, RoutedEventArgs e) => SetTorch(!_torchWanted);
 
         private void ApplyTorch()
         {
