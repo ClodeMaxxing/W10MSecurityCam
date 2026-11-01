@@ -716,8 +716,16 @@ namespace W10MSecurityCam
         }
 
         private bool _dotPulsing;
-        private static Windows.UI.Xaml.Media.SolidColorBrush Brush(byte r, byte g, byte b) =>
-            new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(255, r, g, b));
+        // One brush per colour, made once: the status updates every second would otherwise make dozens of new ones.
+        private static Dictionary<int, Windows.UI.Xaml.Media.SolidColorBrush> _brushes;
+        private static Windows.UI.Xaml.Media.SolidColorBrush Brush(byte r, byte g, byte b)
+        {
+            if (_brushes == null) _brushes = new Dictionary<int, Windows.UI.Xaml.Media.SolidColorBrush>();
+            int key = r << 16 | g << 8 | b;
+            if (!_brushes.TryGetValue(key, out var brush))
+                _brushes[key] = brush = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(255, r, g, b));
+            return brush;
+        }
 
         /// <summary>The status card: dot and state, resolution and viewer pills, big fps / Mbps, engine line.</summary>
         private void UpdateStatusCard(bool streaming)
