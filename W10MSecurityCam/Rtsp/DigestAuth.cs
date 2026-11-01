@@ -54,6 +54,14 @@ namespace W10MSecurityCam.Rtsp
         public bool IsDefault { get { lock (_lock) return _user == DefaultUser && _password == DefaultPassword; } }
         public string UserName { get { lock (_lock) return _user ?? ""; } }
 
+        /// <summary>True when the given password is the current one (for changing the login over the network).</summary>
+        public bool IsCurrentPassword(string password)
+        {
+            string current;
+            lock (_lock) current = _password;
+            return !string.IsNullOrEmpty(current) && FixedEquals(password ?? "", current);
+        }
+
         public void Load()
         {
             try

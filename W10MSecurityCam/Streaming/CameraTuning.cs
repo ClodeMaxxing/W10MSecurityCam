@@ -361,9 +361,9 @@ namespace W10MSecurityCam.Streaming
             var s = new System.Text.StringBuilder();
             try { if (ExposureSupported) s.AppendFormat("exposure {0:0.##} ms{1}", vdc.ExposureControl.Value.TotalMilliseconds, vdc.ExposureControl.Auto ? " (auto)" : ""); } catch { }
             try { var iso = vdc.IsoSpeedControl; if (iso.Supported) s.Append(", ISO ").Append(iso.Value); } catch { }
+            try { if (FocusSupported && IsSensibleFocus(vdc.FocusControl.Value)) LastGoodFocusPercent = ToPercent(vdc.FocusControl.Value); } catch { }
             try { if (FocusSupported) s.Append(", focus ").Append(vdc.FocusControl.Value).Append(" (").Append(FocusHeld ? "held" : vdc.FocusControl.Mode.ToString()).Append(")"); } catch { }
             try { if (WhiteBalanceSupported) s.Append(", white balance ").Append(vdc.WhiteBalanceControl.Value).Append(" K (").Append(vdc.WhiteBalanceControl.Preset).Append(")"); } catch { }
-            try { if (FocusSupported && IsSensibleFocus(vdc.FocusControl.Value)) LastGoodFocusPercent = ToPercent(vdc.FocusControl.Value); } catch { }
             State = s.ToString().TrimStart(',', ' ');
         }
 
