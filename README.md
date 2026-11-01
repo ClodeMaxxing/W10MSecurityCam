@@ -74,17 +74,23 @@ remembers the choice in that browser. Explanations sit behind small (i) icons: h
 - **Camera:** Automatic focus, exposure and white balance (one master box, plus a box and slider for each), **Focus once
   and lock**, and the **flashlight** (only while streaming; it switches itself off after 30 seconds because the LED heats
   the phone fast, and it cannot be dimmed on this phone). Leave everything on Auto for a camera that follows the daylight.
-- **Power:** one button that blacks out the phone screen, and the **Power-saving camera features** box (stabilization
-  off for a fixed mount, hold focus once it has settled; untick the box to choose each). Changing stabilization restarts
-  the stream once.
+- **Power:** **Black screen while streaming** (on by default; it also stops the preview), **Keep the preview running
+  behind the black screen** (off by default: it costs CPU and heat; a tap on the black screen then shows the picture at
+  once; heat protection forces it off), one button that blacks out the phone screen now, and the **Power-saving camera
+  features** switch (stabilization off for a fixed mount, hold focus once it has settled; switch it off to choose
+  each). Changing stabilization restarts the stream once.
+- **Preview on the phone** (under Camera, off by default): the picture while stopped, and while streaming unless the
+  screen is blacked out. The manual sliders are always on screen, greyed while automatic.
 
 **The phone screen while streaming** is black with the preview off, whatever you change on the web page. The main
 screen holds **Start/Stop RTSP stream**, the **service pills** (RTSP over Wi-Fi with its address and viewers, RTSP over
 USB, and the web page: green while streaming, grey when stopped; a tap opens *Network and login*), the status card,
 **Show camera picture (60 s)**, **Black out the screen now**, **Return to normal mode** in safe mode, and any warning;
 Video, Camera, Power, Network and login, and Details and log fold away. Tapping the black screen shows the status for
-15 seconds with no restart. **Show camera picture** (or touching a camera control) shows the picture until 60 seconds
-after your last touch; **Black out the screen now** ends it straight away. The preview can only start or stop while the
+15 seconds with no restart. **Show camera picture** (or touching a camera control, or tapping the dark preview area)
+shows the picture until 60 seconds after your last touch; **Black out the screen now** ends it straight away. The
+same rules run in W10MDashcam and W10MWebCam (`MainPage.Display.cs`): the screen is never black with the preview
+still running unless *Keep the preview running behind the black screen* says so. The preview can only start or stop while the
 stream is stopped (changing it mid-stream stalled the 4K pipeline), so each of these restarts the stream once, a gap of
 a second or two for the NVR. Keeping the preview running behind the black screen was measured and rejected: it doubled
 the app's CPU use (12% to 24%) and raised the battery draw. The start/stop chirp is Windows' own recording sound; it

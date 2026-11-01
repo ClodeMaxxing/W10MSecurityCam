@@ -3,7 +3,20 @@
 Release 1.0 is the first version considered complete for this fork. Build numbers 1.0-1.9 before it were the
 development steps; they are kept in the history table for reference.
 
-## Release 1.3 (build 1.9.33.0)
+## Release 1.3 (build 1.9.34.0)
+
+**Preview and black screen, one rule set in all three apps** (`MainPage.Display.cs`, kept in step by Sync-Core):
+- **Preview on the phone** is a switch under *Camera*, **off by default**: no picture on the phone unless you ask for
+  it. On: the picture while stopped, and while streaming unless the screen is blacked out.
+- **Black screen while streaming** also stops the preview. New under *Power*: **Keep the preview running behind the
+  black screen** (off by default: it costs CPU and heat), so a tap on the black screen shows the picture at once;
+  heat protection forces it off and puts it back afterwards.
+- Adjusting the camera on the phone shows the picture for 60 s as before; **a tap on the dark preview area** does the
+  same as *Show camera picture*. A preview that disagrees with the black screen is fixed with one restart (automatic
+  ones at most once a minute), and nothing else touches the screen or the preview any more, so the screen can no
+  longer go black with the preview still running.
+- The manual focus / exposure / white balance sliders are always on screen, greyed while automatic, and enable at once.
+- The web page and `/config` gain `preview=on|off` and `keeppreview=on|off`.
 
 Feature parity with W10MWebCam and W10MDashcam: what one app of the family did better now exists in all three where it
 applies. The stream, the login and the RTSP transport are unchanged.
