@@ -1456,9 +1456,9 @@ namespace W10MSecurityCam
             o["oisSupported"] = JsonValue.CreateBooleanValue(_tuning.OisSupported);
             o["protect"] = JsonValue.CreateBooleanValue(_protect);
             o["heatProtect"] = JsonValue.CreateBooleanValue(_heatProtectOn);
-            o["preview"] = JsonValue.CreateBooleanValue(PreviewToggle.IsOn);
-            o["keepPreview"] = JsonValue.CreateBooleanValue(KeepPreviewToggle.IsOn);
-            o["powerSave"] = JsonValue.CreateBooleanValue(PowerSaveToggle.IsOn);
+            o["preview"] = JsonValue.CreateBooleanValue(_svPreview);
+            o["keepPreview"] = JsonValue.CreateBooleanValue(_svKeepPreview);
+            o["powerSave"] = JsonValue.CreateBooleanValue(_svPowerSave);
             o["torchSupported"] = JsonValue.CreateBooleanValue(_tuning.TorchSupported);
             o["torchOn"] = JsonValue.CreateBooleanValue(_torchWanted);
             o["torchLeftSec"] = JsonValue.CreateNumberValue(_torchWanted ? Math.Max(0, Math.Ceiling((_torchOffAt - DateTime.Now).TotalSeconds)) : 0);

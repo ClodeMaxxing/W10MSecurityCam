@@ -72,6 +72,7 @@ namespace W10MSecurityCam
         /// </summary>
         private async Task ApplyDisplayAsync(bool byHand = false)
         {
+            SnapshotDisplaySwitches();
             try
             {
                 bool overlay = OverlayWanted;
@@ -107,8 +108,16 @@ namespace W10MSecurityCam
         }
 
         /// <summary>Once a second (the stats tick): a preview that disagrees with what is wanted is fixed with one restart.</summary>
+        /// <summary>
+        /// The three switches as plain fields, for the web thread (/camera/state): a ToggleSwitch can only be read on the
+        /// UI thread. Refreshed from the settings load, every display change and once a second.
+        /// </summary>
+        private volatile bool _svPreview, _svKeepPreview, _svPowerSave = true;
+        private void SnapshotDisplaySwitches() { _svPreview = PreviewToggle.IsOn; _svKeepPreview = KeepPreviewToggle.IsOn; _svPowerSave = PowerSaveToggle.IsOn; }
+
         private void DisplayTick()
         {
+            SnapshotDisplaySwitches();
             if (_camera == null || !StreamingNow || _busy || _protectBusy) { if (!_blackedOut) UpdatePreviewText(); return; }
             if (_camera.Previewing != PreviewWanted) { var _ = RestartForPreviewAsync(PreviewWanted ? "to show the camera picture" : "to stop the preview", _previewFixPending); }
             else if (!_blackedOut) UpdatePreviewText();
