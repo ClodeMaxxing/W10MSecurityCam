@@ -118,6 +118,7 @@ namespace W10MSecurityCam
             StartLogWriter();
             LaunchSelfCheck();
             InitializeComponent();
+            _uiReady = true; // switches with IsOn="True" in the XAML fire their handlers during InitializeComponent, before later controls exist
 
             VersionText.Text = "v" + AppVersion;
 
@@ -1189,7 +1190,7 @@ namespace W10MSecurityCam
         // flashlight; put the person's own settings back once charging resumes. The forced values are never written to the
         // saved settings, so an app restart in between also comes back with the person's own choices.
         private bool _protect, _protectBusy, _protectRestartOwed;
-        private bool _heatProtectOn = true, _loadingHeatUi; // the Heat protection switch (Power); off = never enter protection
+        private bool _heatProtectOn = true, _loadingHeatUi, _uiReady; // the Heat protection switch (Power); off = never enter protection
 
         private void LoadHeatProtectSetting()
         {
