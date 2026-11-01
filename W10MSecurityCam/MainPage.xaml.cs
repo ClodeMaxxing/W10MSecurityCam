@@ -650,8 +650,13 @@ namespace W10MSecurityCam
 
         // ------------------------------------------------------------------ stats + watchdog
 
+        private int _statsTick; // counts the stats ticks (one a second) for the jobs that run every few seconds
+        private BatteryReport _battery; // read once per stats tick; the status card, heat check and status text share it
+
         private void UpdateStats()
         {
+            int tick = _statsTick++;
+            _battery = TryBattery();
             if ((DateTime.Now - _appStarted).TotalSeconds > 20) MarkLaunchHealthy();
             // a preview left running behind the black screen (its stop restart was skipped while busy) is stopped on a later tick
             if (!_blackedOut) UpdatePreviewText();
@@ -672,7 +677,7 @@ namespace W10MSecurityCam
                 if (_camera == null || !_camera.IsStreaming) { _torchWanted = false; LoadTorchUi(); }
                 else if (DateTime.Now >= _torchOffAt) { SetTorch(false); Log("Flashlight switched off automatically (time limit)"); }
             }
-            if (DateTime.Now.Second % 10 == 0)
+            if (tick % 10 == 0)
             {
                 _power.Sample();
                 if ((DateTime.Now - _lastPowerLog).TotalSeconds >= 60)
@@ -682,7 +687,7 @@ namespace W10MSecurityCam
                         " [" + _power.RemainingMwh + " mWh, temp " + _heat + ", " + _power.Status + (_camera != null && _camera.IsStreaming ? ", " + _currentFormat + " " + _currentBitrate : "") + "]");
                 }
             }
-            if (!_blackedOut && DateTime.Now.Second % 2 == 0) UpdateStatusText(); // nobody sees it while the screen is black
+            if (!_blackedOut && tick % 2 == 0) UpdateStatusText(); // nobody sees it while the screen is black
             if (_camera == null) return;
             if (!_camera.IsStreaming)
             {
@@ -698,7 +703,7 @@ namespace W10MSecurityCam
                 _holdBusy = true;
                 var _h = HoldFocusSafeAsync();
             }
-            if (DateTime.Now.Second % 15 == 0)
+            if (tick % 15 == 0)
             {
                 _tuning.Read(_camera.Capture);
                 TuningStateText.Text = _tuning.State;
@@ -727,6 +732,8 @@ namespace W10MSecurityCam
             return brush;
         }
 
+        private string _resLabelKey, _resLabel; // the resolution pill ("4K30") for _currentFormatKey
+
         /// <summary>The status card: dot and state, resolution and viewer pills, big fps / Mbps, engine line.</summary>
         private void UpdateStatusCard(bool streaming)
         {
@@ -735,9 +742,14 @@ namespace W10MSecurityCam
             StateText.Text = _protect ? "HEAT PROTECTION" : streaming ? "STREAMING" : "STOPPED";
             StateText.Foreground = _protect ? Brush(0xFF, 0x6B, 0x6B) : Brush(0x9C, 0xF0, 0xB0);
             StatusDot.Fill = _protect ? Brush(0xFF, 0x55, 0x55) : streaming ? Brush(0x39, 0xFF, 0x14) : Brush(0x55, 0x55, 0x55);
-            var m = System.Text.RegularExpressions.Regex.Match(_currentFormatKey ?? "", @"^(\d+)x(\d+)@(\d+)");
-            ResPill.Visibility = streaming && m.Success ? Visibility.Visible : Visibility.Collapsed;
-            if (m.Success) ResText.Text = (int.Parse(m.Groups[2].Value) >= 2160 ? "4K" : m.Groups[2].Value + "p") + m.Groups[3].Value;
+            if (_resLabelKey != _currentFormatKey)
+            {
+                _resLabelKey = _currentFormatKey; // parsed again only when the format changes
+                var m = System.Text.RegularExpressions.Regex.Match(_currentFormatKey ?? "", @"^(\d+)x(\d+)@(\d+)");
+                _resLabel = m.Success ? (int.Parse(m.Groups[2].Value) >= 2160 ? "4K" : m.Groups[2].Value + "p") + m.Groups[3].Value : null;
+            }
+            ResPill.Visibility = streaming && _resLabel != null ? Visibility.Visible : Visibility.Collapsed;
+            if (_resLabel != null) ResText.Text = _resLabel;
             StatsText.Visibility = streaming ? Visibility.Visible : Visibility.Collapsed;
             if (streaming) StatsText.Text = string.Format("{0,2:0} fps {1,4:0.0} Mbps", _camera.Fps, _camera.Mbps);
             if (!_blackedOut || BlackoutOverlay.Visibility != Visibility.Visible) UpdateTiles(streaming); // nobody sees them under the black overlay
@@ -777,7 +789,7 @@ namespace W10MSecurityCam
         {
             try
             {
-                var r = TryBattery();
+                var r = _battery;
                 int? pct = Percent(r);
                 BattText.Text = pct.HasValue ? pct + "% " + (r.Status == Windows.System.Power.BatteryStatus.Charging ? "chg" : r.Status.ToString().ToLowerInvariant()) : "n/a";
                 int p = pct ?? 0;
@@ -1314,7 +1326,7 @@ namespace W10MSecurityCam
         {
             // The frame rate does NOT show heat on this phone (it stayed at 25 fps while Windows warned about overheating),
             // so the only sign used is that charging pauses (status Idle) on a charger Windows calls adequate.
-            var r = TryBattery();
+            var r = _battery;
             int? pct = Percent(r);
             bool paused = r != null && r.Status == Windows.System.Power.BatteryStatus.Idle && _power.Supply == "Adequate" && (!pct.HasValue || pct.Value < 95);
             bool charging = r != null && r.Status == Windows.System.Power.BatteryStatus.Charging;
@@ -1446,7 +1458,7 @@ namespace W10MSecurityCam
         {
             try
             {
-                var r = TryBattery();
+                var r = _battery;
                 int? pct = Percent(r);
                 string bat = pct.HasValue ? pct + "% " : "";
                 bat += r == null ? "unknown" : r.Status.ToString().ToLowerInvariant();
