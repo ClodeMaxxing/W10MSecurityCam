@@ -1202,7 +1202,7 @@ namespace W10MSecurityCam
         /// <summary>Off asks first: without heat protection a hot phone keeps full video and the screen, and on a weak charger the battery drains.</summary>
         private async void HeatProtectToggle_Toggled(object sender, RoutedEventArgs e)
         {
-            if (_loadingHeatUi) return;
+            if (_loadingHeatUi || !_uiReady) return;
             if (!HeatProtectToggle.IsOn)
             {
                 var dlg = new ContentDialog
